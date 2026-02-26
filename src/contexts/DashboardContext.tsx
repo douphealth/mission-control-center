@@ -29,9 +29,29 @@ const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DashboardState>(() => {
-    const data = loadData();
-    const theme = (localStorage.getItem("mc-theme") as "light" | "dark") || "light";
-    return { ...data, activeSection: "dashboard", sidebarOpen: true, theme };
+    try {
+      const data = loadData();
+      const theme = (localStorage.getItem("mc-theme") as "light" | "dark") || "light";
+      return { ...data, activeSection: "dashboard", sidebarOpen: true, theme };
+    } catch (e) {
+      console.error("Failed to load dashboard data, using defaults:", e);
+      return {
+        userName: "Alex",
+        userRole: "Digital Creator & Developer",
+        websites: [],
+        tasks: [],
+        repos: [],
+        buildProjects: [],
+        links: [],
+        notes: [],
+        payments: [],
+        ideas: [],
+        credentials: [],
+        activeSection: "dashboard",
+        sidebarOpen: true,
+        theme: "light" as const,
+      };
+    }
   });
 
   useEffect(() => {
