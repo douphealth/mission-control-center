@@ -1,6 +1,8 @@
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import StatusBar from '@/components/StatusBar';
+import MobileBottomNav from '@/components/MobileBottomNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import React, { lazy, Suspense } from 'react';
@@ -81,13 +83,18 @@ export default function DashboardLayout() {
     );
   }
 
+  const isMobile = useIsMobile();
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
+      {/* Hide sidebar on mobile — use bottom nav instead */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1600px] mx-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+          <div className="max-w-[1600px] mx-auto p-3 sm:p-4 lg:p-6">
             <Suspense fallback={<LoadingSkeleton />}>
               <AnimatePresence mode="wait">
                 <motion.div
@@ -103,8 +110,10 @@ export default function DashboardLayout() {
             </Suspense>
           </div>
         </main>
-        <StatusBar />
+        {!isMobile && <StatusBar />}
       </div>
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav />
     </div>
   );
 }
