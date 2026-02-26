@@ -1,7 +1,5 @@
 import { useDashboard } from '@/contexts/DashboardContext';
-import { useState, useCallback, useMemo } from 'react';
-// react-grid-layout v1 — import via default to avoid Vite named-export issues
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { useState, useCallback } from 'react';
 import * as RGL from 'react-grid-layout';
 // @ts-ignore
 const Responsive = RGL.Responsive || RGL.default?.Responsive;
@@ -13,15 +11,12 @@ import {
   Globe, Github, Hammer, CheckSquare, TrendingUp, TrendingDown,
   Clock, ArrowRight, Zap, Calendar, FileText, Target, Sparkles, Settings2,
   DollarSign, Lightbulb, Eye, EyeOff, ArrowUpRight, ArrowDownRight,
-  Pin, Lock, Unlock, ExternalLink, Activity, GripVertical, Flame
+  Pin, Lock, Unlock, ExternalLink, Activity, GripVertical, Flame,
+  Plus, ChevronRight, MoreHorizontal, BarChart3
 } from 'lucide-react';
 import {
-  widgetDefinitions,
-  getDefaultLayouts,
-  loadSavedLayout,
-  saveLayout,
-  loadWidgetVisibility,
-  saveWidgetVisibility,
+  widgetDefinitions, getDefaultLayouts, loadSavedLayout, saveLayout,
+  loadWidgetVisibility, saveWidgetVisibility,
 } from '@/lib/widgetRegistry';
 import 'react-grid-layout/css/styles.css';
 
@@ -30,13 +25,20 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const fadeUp = (i: number) => ({
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, delay: i * 0.03 },
+  transition: { duration: 0.35, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
 });
+
+const priorityConfig: Record<string, { color: string; bg: string; ring: string; label: string }> = {
+  critical: { color: 'text-rose-500', bg: 'bg-rose-500/10', ring: 'ring-rose-500/20', label: 'Critical' },
+  high: { color: 'text-amber-500', bg: 'bg-amber-500/10', ring: 'ring-amber-500/20', label: 'High' },
+  medium: { color: 'text-blue-500', bg: 'bg-blue-500/10', ring: 'ring-blue-500/20', label: 'Medium' },
+  low: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/20', label: 'Low' },
+};
 
 export default function DashboardHome() {
   const {
     websites, repos, buildProjects, tasks, links, notes, payments, ideas, habits,
-    setActiveSection,
+    setActiveSection, userName,
   } = useDashboard();
 
   const [layouts, setLayouts] = useState(() => loadSavedLayout() || { lg: getDefaultLayouts(12), md: getDefaultLayouts(10), sm: getDefaultLayouts(6), xs: getDefaultLayouts(4) });
@@ -55,7 +57,7 @@ export default function DashboardHome() {
     saveWidgetVisibility(next);
   };
 
-  // ─── Data Computations ────────────────────────────────────────────────
+  // ─── Data ─────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
   const activeSites = websites.filter(w => w.status === 'active').length;
   const openTasks = tasks.filter(t => t.status !== 'done').length;
@@ -69,10 +71,10 @@ export default function DashboardHome() {
   const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
   const stats = [
-    { label: 'Websites', value: websites.length, sub: `${activeSites} active`, icon: Globe, trend: `+${activeSites}`, up: true, gradient: 'from-blue-500/20 to-blue-600/5', iconColor: 'text-blue-500', section: 'websites' },
-    { label: 'GitHub Repos', value: repos.length, sub: `${repos.filter(r => r.status === 'active').length} active`, icon: Github, trend: '+5', up: true, gradient: 'from-purple-500/20 to-purple-600/5', iconColor: 'text-purple-500', section: 'github' },
-    { label: 'Build Projects', value: buildProjects.length, sub: `${activeBuilds} in progress`, icon: Hammer, trend: `+${activeBuilds}`, up: true, gradient: 'from-amber-500/20 to-amber-600/5', iconColor: 'text-amber-500', section: 'builds' },
-    { label: 'Open Tasks', value: openTasks, sub: dueToday > 0 ? `${dueToday} due today` : overdueTasks > 0 ? `${overdueTasks} overdue!` : 'All on track ✨', icon: CheckSquare, trend: dueToday > 0 ? String(dueToday) : '0', up: overdueTasks === 0, gradient: overdueTasks > 0 ? 'from-red-500/20 to-red-600/5' : 'from-emerald-500/20 to-emerald-600/5', iconColor: overdueTasks > 0 ? 'text-red-500' : 'text-emerald-500', section: 'tasks' },
+    { label: 'Websites', value: websites.length, sub: `${activeSites} active`, icon: Globe, color: 'from-blue-500 to-cyan-400', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500', section: 'websites' },
+    { label: 'Repositories', value: repos.length, sub: `${repos.filter(r => r.status === 'active').length} active`, icon: Github, color: 'from-violet-500 to-purple-400', iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500', section: 'github' },
+    { label: 'Projects', value: buildProjects.length, sub: `${activeBuilds} in progress`, icon: Hammer, color: 'from-amber-500 to-orange-400', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', section: 'builds' },
+    { label: 'Tasks', value: openTasks, sub: dueToday > 0 ? `${dueToday} due today` : overdueTasks > 0 ? `${overdueTasks} overdue` : 'All on track ✨', icon: CheckSquare, color: overdueTasks > 0 ? 'from-rose-500 to-red-400' : 'from-emerald-500 to-green-400', iconBg: overdueTasks > 0 ? 'bg-rose-500/10' : 'bg-emerald-500/10', iconColor: overdueTasks > 0 ? 'text-rose-500' : 'text-emerald-500', section: 'tasks' },
   ];
 
   const todayTasks = tasks.filter(t => t.status !== 'done').sort((a, b) => {
@@ -84,8 +86,6 @@ export default function DashboardHome() {
   const pinnedNotes = notes.filter(n => n.pinned).slice(0, 3);
   const topIdeas = ideas.filter(i => i.status !== 'parked').sort((a, b) => b.votes - a.votes).slice(0, 4);
   const quickLinks = links.filter(l => l.pinned).slice(0, 6);
-  const priorityColor: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-blue-500', low: 'bg-emerald-500' };
-  const priorityBg: Record<string, string> = { critical: 'bg-red-500/10 text-red-500', high: 'bg-amber-500/10 text-amber-500', medium: 'bg-blue-500/10 text-blue-500', low: 'bg-emerald-500/10 text-emerald-500' };
 
   const quotes = [
     { text: 'The only way to do great work is to love what you do.', author: 'Steve Jobs' },
@@ -96,31 +96,51 @@ export default function DashboardHome() {
   ];
   const quote = quotes[new Date().getDate() % quotes.length];
 
-  // ─── Widget Renderer ──────────────────────────────────────────────────
-  const renderWidget = (widgetId: string, i: number) => {
-    const widgetClass = 'h-full bg-card/80 backdrop-blur-xl rounded-2xl border border-border/40 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden';
+  const statusColors: Record<string, string> = { 'todo': 'bg-slate-400', 'in-progress': 'bg-blue-500', 'blocked': 'bg-red-500', 'done': 'bg-emerald-500' };
 
+  // ─── Widget Header Component ──────────────────────────────────────────
+  const WidgetHeader = ({ icon: Icon, iconBg, iconColor, title, action, actionLabel, actionSection }: any) => (
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center`}>
+          <Icon size={17} className={iconColor} />
+        </div>
+        <h3 className="font-bold text-[15px] text-card-foreground tracking-tight">{title}</h3>
+      </div>
+      {actionSection && (
+        <button onClick={() => setActiveSection(actionSection)} className="flex items-center gap-1 text-xs text-primary/80 hover:text-primary font-semibold transition-colors group">
+          {actionLabel || 'View All'} <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      )}
+    </div>
+  );
+
+  // ─── Widgets ──────────────────────────────────────────────────────────
+  const widgetClass = 'h-full rounded-[20px] border border-border/30 overflow-hidden transition-all duration-300';
+  const widgetBg = 'bg-card/70 backdrop-blur-2xl hover:bg-card/85';
+
+  const renderWidget = (widgetId: string, i: number) => {
     switch (widgetId) {
       case 'stats':
         return (
-          <div className={`${widgetClass} p-0`}>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 h-full">
+          <div className={`${widgetClass} ${widgetBg} p-0`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 h-full divide-x divide-border/20">
               {stats.map((s, si) => (
-                <motion.div key={s.label} {...fadeUp(si)} className="p-3 sm:p-5 cursor-pointer group hover:bg-primary/5 transition-all border-b sm:border-b-0 sm:border-r border-border/30 last:border-0 flex flex-col" onClick={() => setActiveSection(s.section)}>
-                  <div className="flex items-start justify-between">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center`}>
-                      <s.icon size={18} className={s.iconColor} />
+                <motion.div key={s.label} {...fadeUp(si)}
+                  className="p-5 cursor-pointer group hover:bg-primary/[0.03] transition-all relative" onClick={() => setActiveSection(s.section)}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-2xl ${s.iconBg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                      <s.icon size={19} className={s.iconColor} />
                     </div>
-                    <div className={`flex items-center gap-1 text-xs font-semibold ${s.up ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {s.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {s.trend}
+                    <div className="flex items-center gap-1 text-xs font-semibold text-emerald-500">
+                      <TrendingUp size={12} />
                     </div>
                   </div>
-                  <div className="mt-auto pt-2 sm:pt-3">
-                    <div className="text-2xl sm:text-3xl font-extrabold text-card-foreground tracking-tight">{s.value}</div>
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">{s.label}</div>
-                    <div className="text-[10px] text-muted-foreground/60 mt-0.5 hidden sm:block">{s.sub}</div>
-                  </div>
+                  <div className="text-[32px] font-extrabold text-card-foreground tracking-tighter leading-none mb-1">{s.value}</div>
+                  <div className="text-[13px] font-semibold text-muted-foreground/70">{s.label}</div>
+                  <div className="text-[11px] text-muted-foreground/50 mt-0.5">{s.sub}</div>
+                  {/* Bottom gradient accent */}
+                  <div className={`absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r ${s.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                 </motion.div>
               ))}
             </div>
@@ -129,115 +149,102 @@ export default function DashboardHome() {
 
       case 'tasks-focus':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <Zap size={16} className="text-amber-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Today's Focus</h3>
-                {dueToday > 0 && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full animate-pulse">{dueToday} due</span>}
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Zap} iconBg="bg-amber-500/10" iconColor="text-amber-500" title="Today's Focus" actionSection="tasks" />
+            {dueToday > 0 && (
+              <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span className="text-xs font-semibold text-rose-500">{dueToday} task{dueToday > 1 ? 's' : ''} due today</span>
               </div>
-              <button onClick={() => setActiveSection('tasks')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View All <ArrowRight size={12} /></button>
-            </div>
-            <div className="flex-1 overflow-auto space-y-1">
-              {todayTasks.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors group">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${priorityColor[task.priority]} ring-2 ring-offset-2 ring-offset-card ${priorityColor[task.priority]}/30`} />
-                  <span className="text-sm text-card-foreground flex-1 truncate">{task.title}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 font-semibold ${priorityBg[task.priority]}`}>{task.priority}</span>
-                  <span className={`text-xs flex-shrink-0 ${task.dueDate < today ? 'text-red-500 font-semibold' : 'text-muted-foreground'}`}>{task.dueDate}</span>
+            )}
+            <div className="flex-1 overflow-auto space-y-1.5">
+              {todayTasks.map((task, ti) => {
+                const pc = priorityConfig[task.priority] || priorityConfig.medium;
+                return (
+                  <motion.div key={task.id} {...fadeUp(ti)}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/40 transition-all group cursor-pointer">
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusColors[task.status] || 'bg-slate-400'}`} />
+                    <span className="text-[13px] text-card-foreground flex-1 truncate font-medium">{task.title}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-lg font-bold ${pc.bg} ${pc.color}`}>{pc.label}</span>
+                    <span className={`text-[11px] font-mono flex-shrink-0 ${task.dueDate < today ? 'text-rose-500 font-bold' : 'text-muted-foreground/60'}`}>{task.dueDate}</span>
+                  </motion.div>
+                );
+              })}
+              {todayTasks.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground/60">
+                  <div className="text-3xl mb-2">🎉</div>
+                  <p className="text-sm font-medium">All caught up!</p>
                 </div>
-              ))}
-              {todayTasks.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">🎉 All caught up!</div>}
+              )}
             </div>
           </div>
         );
 
       case 'deadlines':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Calendar size={16} className="text-blue-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Upcoming Deadlines</h3>
-              </div>
-              <button onClick={() => setActiveSection('calendar')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">Calendar <ArrowRight size={12} /></button>
-            </div>
-            <div className="flex-1 overflow-auto space-y-1">
-              {upcomingDeadlines.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priorityColor[task.priority]}`} />
-                  <span className="text-sm text-card-foreground flex-1 truncate">{task.title}</span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0 tabular-nums">{task.dueDate}</span>
-                </div>
-              ))}
-              {upcomingDeadlines.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">No upcoming deadlines 🌟</div>}
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Calendar} iconBg="bg-blue-500/10" iconColor="text-blue-500" title="Upcoming" actionLabel="Calendar" actionSection="calendar" />
+            <div className="flex-1 overflow-auto space-y-1.5">
+              {upcomingDeadlines.map((task, ti) => {
+                const pc = priorityConfig[task.priority] || priorityConfig.medium;
+                const daysLeft = Math.ceil((new Date(task.dueDate).getTime() - Date.now()) / 86400000);
+                return (
+                  <motion.div key={task.id} {...fadeUp(ti)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/40 transition-all">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[task.status] || 'bg-slate-400'}`} />
+                    <span className="text-[13px] text-card-foreground flex-1 truncate font-medium">{task.title}</span>
+                    <span className={`text-[11px] px-2 py-1 rounded-lg font-semibold ${daysLeft <= 1 ? 'bg-rose-500/10 text-rose-500' : daysLeft <= 3 ? 'bg-amber-500/10 text-amber-500' : 'bg-secondary text-muted-foreground'}`}>
+                      {daysLeft <= 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : `${daysLeft}d`}
+                    </span>
+                  </motion.div>
+                );
+              })}
+              {upcomingDeadlines.length === 0 && <div className="text-center py-10 text-muted-foreground/60 text-sm font-medium">No upcoming deadlines 🌟</div>}
             </div>
           </div>
         );
 
       case 'finance':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <DollarSign size={16} className="text-emerald-500" />
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={DollarSign} iconBg="bg-emerald-500/10" iconColor="text-emerald-500" title="Finance" actionLabel="Details" actionSection="payments" />
+            <div className="grid grid-cols-3 gap-2.5 mb-3">
+              {[
+                { label: 'Income', value: totalIncome, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-500/5', border: 'border-emerald-500/10' },
+                { label: 'Expenses', value: totalExpenses, icon: ArrowDownRight, color: 'text-rose-500', bg: 'bg-rose-500/5', border: 'border-rose-500/10' },
+                { label: 'Pending', value: pendingAmount, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/5', border: 'border-amber-500/10' },
+              ].map(d => (
+                <div key={d.label} className={`text-center p-3.5 rounded-2xl ${d.bg} border ${d.border} flex flex-col items-center justify-center`}>
+                  <d.icon size={16} className={`${d.color} mb-1`} />
+                  <div className={`text-lg font-extrabold ${d.color} tabular-nums`}>{fmt(d.value)}</div>
+                  <div className="text-[10px] text-muted-foreground/70 font-semibold mt-0.5">{d.label}</div>
                 </div>
-                <h3 className="font-bold text-card-foreground">Finance Summary</h3>
-              </div>
-              <button onClick={() => setActiveSection('payments')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">Details <ArrowRight size={12} /></button>
+              ))}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 flex-1">
-              <div className="text-center p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center justify-center">
-                <ArrowUpRight size={18} className="text-emerald-500 mb-1" />
-                <div className="text-lg font-extrabold text-emerald-500">{fmt(totalIncome)}</div>
-                <div className="text-[10px] text-muted-foreground font-medium">Income</div>
-              </div>
-              <div className="text-center p-4 rounded-xl bg-red-500/5 border border-red-500/10 flex flex-col items-center justify-center">
-                <ArrowDownRight size={18} className="text-red-500 mb-1" />
-                <div className="text-lg font-extrabold text-red-500">{fmt(totalExpenses)}</div>
-                <div className="text-[10px] text-muted-foreground font-medium">Expenses</div>
-              </div>
-              <div className="text-center p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 flex flex-col items-center justify-center">
-                <Clock size={18} className="text-amber-500 mb-1" />
-                <div className="text-lg font-extrabold text-amber-500">{fmt(pendingAmount)}</div>
-                <div className="text-[10px] text-muted-foreground font-medium">Pending</div>
-              </div>
-            </div>
-            <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 text-center border border-border/30">
-              <div className={`text-2xl font-extrabold ${totalIncome - totalExpenses >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{fmt(totalIncome - totalExpenses)}</div>
-              <div className="text-[10px] text-muted-foreground font-medium">Net Profit</div>
+            <div className="mt-auto p-4 rounded-2xl bg-gradient-to-r from-primary/[0.04] to-accent/[0.03] text-center border border-border/20">
+              <div className={`text-2xl font-extrabold tabular-nums ${totalIncome - totalExpenses >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{fmt(totalIncome - totalExpenses)}</div>
+              <div className="text-[10px] text-muted-foreground/60 font-semibold">Net Profit</div>
             </div>
           </div>
         );
 
       case 'activity':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <Activity size={16} className="text-purple-500" />
-              </div>
-              <h3 className="font-bold text-card-foreground">Recent Activity</h3>
-            </div>
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Activity} iconBg="bg-violet-500/10" iconColor="text-violet-500" title="Activity" />
             <div className="flex-1 overflow-auto space-y-0.5">
               {[
-                { text: 'Deployed SaaS Landing Page to Vercel', time: '2h ago', icon: '🚀' },
-                { text: 'Completed SSL certificate renewal', time: '5h ago', icon: '✅' },
-                { text: 'Pushed 3 commits to ai-mission-control', time: '8h ago', icon: '🐙' },
-                { text: 'Added new blog post draft', time: '1d ago', icon: '📝' },
-                { text: 'Updated WooCommerce to v9.2', time: '1d ago', icon: '🔌' },
-                { text: 'Fixed responsive layout on agency site', time: '2d ago', icon: '🔧' },
+                { text: 'Deployed SaaS Landing Page', time: '2h ago', emoji: '🚀' },
+                { text: 'Completed SSL renewal', time: '5h ago', emoji: '✅' },
+                { text: '3 commits to ai-mission-control', time: '8h ago', emoji: '🐙' },
+                { text: 'New blog post draft added', time: '1d ago', emoji: '📝' },
+                { text: 'WooCommerce v9.2 update', time: '1d ago', emoji: '🔌' },
+                { text: 'Fixed responsive layout', time: '2d ago', emoji: '🔧' },
               ].map((a, ai) => (
-                <div key={ai} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/30 transition-colors">
-                  <span className="text-base flex-shrink-0">{a.icon}</span>
-                  <span className="text-sm text-card-foreground flex-1 truncate">{a.text}</span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0 tabular-nums">{a.time}</span>
-                </div>
+                <motion.div key={ai} {...fadeUp(ai)} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/30 transition-all">
+                  <span className="text-base flex-shrink-0">{a.emoji}</span>
+                  <span className="text-[13px] text-card-foreground flex-1 truncate">{a.text}</span>
+                  <span className="text-[11px] text-muted-foreground/50 flex-shrink-0 tabular-nums font-medium">{a.time}</span>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -245,24 +252,24 @@ export default function DashboardHome() {
 
       case 'quick-links':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-card-foreground">Quick Access</h3>
-              <button onClick={() => setActiveSection('links')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">All Links <ArrowRight size={12} /></button>
-            </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1 content-start">
-              {quickLinks.map(link => (
-                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 transition-all group hover:scale-[1.02] border border-transparent hover:border-primary/10">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all">{link.title.charAt(0)}</div>
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={ExternalLink} iconBg="bg-primary/10" iconColor="text-primary" title="Quick Access" actionLabel="All Links" actionSection="links" />
+            <div className="grid grid-cols-2 gap-2 flex-1 content-start">
+              {quickLinks.map((link, li) => (
+                <motion.a key={link.id} {...fadeUp(li)} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-secondary/20 hover:bg-secondary/50 transition-all group border border-transparent hover:border-primary/10 hover:scale-[1.01]">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-[13px] font-bold flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
+                    {link.title.charAt(0)}
+                  </div>
                   <div className="min-w-0">
                     <span className="text-xs font-semibold text-card-foreground truncate block">{link.title}</span>
-                    <span className="text-[10px] text-muted-foreground truncate block">{link.category}</span>
+                    <span className="text-[10px] text-muted-foreground/50 truncate block">{link.category}</span>
                   </div>
-                </a>
+                </motion.a>
               ))}
               {quickLinks.length === 0 && (
-                <div className="col-span-2 text-center py-6 text-muted-foreground text-sm">
-                  <button onClick={() => setActiveSection('links')} className="text-primary hover:underline">Pin some links to see them here</button>
+                <div className="col-span-2 text-center py-8 text-muted-foreground/50 text-sm">
+                  <button onClick={() => setActiveSection('links')} className="text-primary hover:underline font-medium">Pin some links</button>
                 </div>
               )}
             </div>
@@ -271,20 +278,24 @@ export default function DashboardHome() {
 
       case 'platforms':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <h3 className="font-bold text-card-foreground mb-4">Platform Status</h3>
-            <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={BarChart3} iconBg="bg-sky-500/10" iconColor="text-sky-500" title="Platforms" />
+            <div className="grid grid-cols-2 gap-2 flex-1 content-start">
               {[
-                { name: 'Cloudflare', section: 'cloudflare', status: 'Operational', ok: true, icon: '☁️' },
-                { name: 'Vercel', section: 'vercel', status: 'Operational', ok: true, icon: '🚀' },
-                { name: 'Google SC', section: 'seo', status: '2 warnings', ok: false, icon: '🔍' },
-                { name: 'OpenClaw', section: 'openclaw', status: 'Operational', ok: true, icon: '🐙' },
+                { name: 'Cloudflare', section: 'cloudflare', ok: true, emoji: '☁️' },
+                { name: 'Vercel', section: 'vercel', ok: true, emoji: '🚀' },
+                { name: 'Google SC', section: 'seo', ok: false, emoji: '🔍' },
+                { name: 'OpenClaw', section: 'openclaw', ok: true, emoji: '🐙' },
               ].map(p => (
-                <button key={p.name} onClick={() => setActiveSection(p.section)} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 transition-all hover:scale-[1.02] border border-transparent hover:border-primary/10">
-                  <span className="text-xl">{p.icon}</span>
+                <button key={p.name} onClick={() => setActiveSection(p.section)}
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-secondary/20 hover:bg-secondary/50 transition-all hover:scale-[1.01] border border-transparent hover:border-primary/10">
+                  <span className="text-xl">{p.emoji}</span>
                   <div className="text-left min-w-0">
                     <div className="text-xs font-semibold text-card-foreground">{p.name}</div>
-                    <div className={`text-[11px] font-medium ${p.ok ? 'text-emerald-500' : 'text-amber-500'}`}>{p.ok ? '🟢' : '🟡'} {p.status}</div>
+                    <div className={`text-[10px] font-semibold flex items-center gap-1 ${p.ok ? 'text-emerald-500' : 'text-amber-500'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${p.ok ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      {p.ok ? 'Operational' : 'Warning'}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -294,86 +305,64 @@ export default function DashboardHome() {
 
       case 'ideas':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <Lightbulb size={16} className="text-amber-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Top Ideas</h3>
-              </div>
-              <button onClick={() => setActiveSection('ideas')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View All <ArrowRight size={12} /></button>
-            </div>
-            <div className="flex-1 overflow-auto space-y-2">
-              {topIdeas.map(idea => (
-                <div key={idea.id} className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-secondary/50 transition-colors">
-                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{idea.votes}↑</span>
-                  <span className="text-sm text-card-foreground flex-1 truncate">{idea.title}</span>
-                  <span className="badge-muted text-[10px]">{idea.status}</span>
-                </div>
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Lightbulb} iconBg="bg-amber-500/10" iconColor="text-amber-500" title="Top Ideas" actionSection="ideas" />
+            <div className="flex-1 overflow-auto space-y-1.5">
+              {topIdeas.map((idea, ii) => (
+                <motion.div key={idea.id} {...fadeUp(ii)} className="flex items-center gap-2.5 p-3 rounded-xl hover:bg-secondary/40 transition-all">
+                  <span className="text-xs font-extrabold text-primary bg-primary/10 px-2 py-1 rounded-lg tabular-nums">{idea.votes}↑</span>
+                  <span className="text-[13px] text-card-foreground flex-1 truncate font-medium">{idea.title}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary text-muted-foreground font-semibold">{idea.status}</span>
+                </motion.div>
               ))}
-              {topIdeas.length === 0 && <div className="text-center py-4 text-muted-foreground text-sm">No active ideas</div>}
+              {topIdeas.length === 0 && <div className="text-center py-8 text-muted-foreground/50 text-sm">No active ideas</div>}
             </div>
           </div>
         );
 
       case 'notes-preview':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Pin size={16} className="text-blue-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Pinned Notes</h3>
-              </div>
-              <button onClick={() => setActiveSection('notes')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">All Notes <ArrowRight size={12} /></button>
-            </div>
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Pin} iconBg="bg-blue-500/10" iconColor="text-blue-500" title="Pinned Notes" actionLabel="Notes" actionSection="notes" />
             <div className="flex-1 overflow-auto space-y-2">
-              {pinnedNotes.map(note => (
-                <button key={note.id} onClick={() => setActiveSection('notes')} className="w-full text-left p-3 rounded-xl hover:bg-secondary/50 transition-colors border border-border/20">
-                  <div className="text-sm font-semibold text-card-foreground truncate">{note.title}</div>
-                  <div className="text-xs text-muted-foreground truncate mt-0.5">{note.content.slice(0, 60)}...</div>
-                </button>
+              {pinnedNotes.map((note, ni) => (
+                <motion.button key={note.id} {...fadeUp(ni)} onClick={() => setActiveSection('notes')}
+                  className="w-full text-left p-3.5 rounded-xl hover:bg-secondary/40 transition-all border border-border/15 hover:border-primary/10">
+                  <div className="text-[13px] font-semibold text-card-foreground truncate">{note.title}</div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate mt-1 leading-relaxed">{note.content.slice(0, 80)}...</div>
+                </motion.button>
               ))}
-              {pinnedNotes.length === 0 && <div className="text-center py-4 text-muted-foreground text-sm">No pinned notes</div>}
+              {pinnedNotes.length === 0 && <div className="text-center py-8 text-muted-foreground/50 text-sm">No pinned notes</div>}
             </div>
           </div>
         );
 
       case 'quote':
         return (
-          <div className={`${widgetClass} p-6 flex flex-col justify-center bg-gradient-to-br from-primary/5 via-transparent to-accent/5`}>
-            <Sparkles size={20} className="text-primary/40 mb-3" />
-            <div className="text-lg font-semibold text-card-foreground italic leading-relaxed">"{quote.text}"</div>
-            <div className="text-sm text-muted-foreground mt-3 font-medium">— {quote.author}</div>
+          <div className={`${widgetClass} ${widgetBg} p-6 flex flex-col justify-center bg-gradient-to-br from-primary/[0.04] via-transparent to-accent/[0.03]`}>
+            <Sparkles size={18} className="text-primary/30 mb-3" />
+            <div className="text-[15px] font-semibold text-card-foreground/90 italic leading-relaxed">"{quote.text}"</div>
+            <div className="text-[12px] text-muted-foreground/50 mt-3 font-semibold">— {quote.author}</div>
           </div>
         );
 
       case 'habits':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Flame size={16} className="text-orange-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Habit Tracker</h3>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto space-y-2">
-              {habits.length > 0 ? habits.slice(0, 5).map(h => (
-                <div key={h.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Flame} iconBg="bg-orange-500/10" iconColor="text-orange-500" title="Habits" actionSection="habits" />
+            <div className="flex-1 overflow-auto space-y-1.5">
+              {habits.length > 0 ? habits.slice(0, 5).map((h, hi) => (
+                <motion.div key={h.id} {...fadeUp(hi)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/40 transition-all">
                   <span className="text-lg">{h.icon}</span>
-                  <span className="text-sm text-card-foreground flex-1 truncate">{h.name}</span>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-orange-500">
+                  <span className="text-[13px] text-card-foreground flex-1 truncate font-medium">{h.name}</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-orange-500">
                     <Flame size={12} /> {h.streak}
                   </div>
-                </div>
+                </motion.div>
               )) : (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  <p>No habits tracked yet</p>
-                  <p className="text-xs mt-1">Add habits in Settings</p>
+                <div className="text-center py-10 text-muted-foreground/50 text-sm">
+                  <p className="font-medium">No habits yet</p>
+                  <button onClick={() => setActiveSection('habits')} className="text-primary hover:underline text-xs mt-1">Start tracking</button>
                 </div>
               )}
             </div>
@@ -382,68 +371,58 @@ export default function DashboardHome() {
 
       case 'websites-summary':
         return (
-          <div className={`${widgetClass} p-5 flex flex-col`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Globe size={16} className="text-blue-500" />
-                </div>
-                <h3 className="font-bold text-card-foreground">Websites</h3>
-              </div>
-              <button onClick={() => setActiveSection('websites')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">Manage <ArrowRight size={12} /></button>
-            </div>
-            <div className="flex-1 overflow-auto space-y-1.5">
-              {websites.slice(0, 5).map(w => (
-                <div key={w.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/50 transition-colors group">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${w.status === 'active' ? 'bg-emerald-500' : w.status === 'maintenance' ? 'bg-amber-500' : 'bg-red-500'}`} />
-                  <span className="text-sm text-card-foreground flex-1 truncate font-medium">{w.name}</span>
-                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{w.category}</span>
+          <div className={`${widgetClass} ${widgetBg} p-5 flex flex-col`}>
+            <WidgetHeader icon={Globe} iconBg="bg-blue-500/10" iconColor="text-blue-500" title="My Websites" actionLabel="Manage" actionSection="websites" />
+            <div className="flex-1 overflow-auto space-y-1">
+              {websites.slice(0, 5).map((w, wi) => (
+                <motion.div key={w.id} {...fadeUp(wi)} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/40 transition-all group">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${w.status === 'active' ? 'bg-emerald-500' : w.status === 'maintenance' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                  <span className="text-[13px] text-card-foreground flex-1 truncate font-medium">{w.name}</span>
+                  <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px] font-medium">{w.category}</span>
                   <a href={w.url} target="_blank" rel="noopener noreferrer" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <ExternalLink size={12} className="text-primary" />
+                    <ExternalLink size={13} className="text-primary" />
                   </a>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         );
 
       default:
-        return <div className={`${widgetClass} p-5 flex items-center justify-center text-muted-foreground text-sm`}>Widget: {widgetId}</div>;
+        return <div className={`${widgetClass} ${widgetBg} p-5 flex items-center justify-center text-muted-foreground/40 text-sm`}>Widget: {widgetId}</div>;
     }
   };
 
   const visibleWidgets = widgetDefinitions.filter(w => visibility[w.id] !== false);
 
   return (
-    <div className="space-y-4">
-      {/* Header Controls */}
-      <motion.div {...fadeUp(0)} className="flex flex-wrap gap-2 items-center justify-between">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
-          <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] sm:text-xs font-semibold">
-            <Target size={12} /> {completedToday} done
+    <div className="space-y-5">
+      {/* Welcome + Controls */}
+      <motion.div {...fadeUp(0)} className="flex flex-wrap gap-3 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/8 border border-emerald-500/10 text-emerald-500 text-xs font-bold tracking-tight">
+            <Target size={13} /> {completedToday} done today
           </div>
           {overdueTasks > 0 && (
-            <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-red-500/10 text-red-500 text-[10px] sm:text-xs font-semibold animate-pulse">
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-500/8 border border-rose-500/10 text-rose-500 text-xs font-bold animate-pulse tracking-tight">
               ⚠️ {overdueTasks} overdue
             </div>
           )}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-500 text-xs font-semibold">
-            <FileText size={12} /> {notes.length} notes
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-500/8 border border-blue-500/10 text-blue-500 text-xs font-bold tracking-tight">
+            <FileText size={13} /> {notes.length} notes
           </div>
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-500 text-xs font-semibold">
-            <Sparkles size={12} /> {links.length} links
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-500/8 border border-violet-500/10 text-violet-500 text-xs font-bold tracking-tight">
+            <Sparkles size={13} /> {links.length} links
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsLocked(!isLocked)}
-            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl transition-all ${isLocked ? 'text-muted-foreground hover:text-foreground hover:bg-secondary' : 'text-primary bg-primary/10'}`}
-            title={isLocked ? 'Unlock grid to rearrange widgets' : 'Lock grid'}
-          >
+          <button onClick={() => setIsLocked(!isLocked)}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all ${isLocked ? 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary' : 'text-primary bg-primary/10 ring-1 ring-primary/15'}`}>
             {isLocked ? <Lock size={13} /> : <Unlock size={13} />}
             {isLocked ? 'Locked' : 'Editing'}
           </button>
-          <button onClick={() => setConfigOpen(!configOpen)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-secondary font-medium">
+          <button onClick={() => setConfigOpen(!configOpen)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-foreground transition-colors px-3.5 py-2 rounded-xl hover:bg-secondary font-semibold">
             <Settings2 size={14} /> Widgets
           </button>
         </div>
@@ -453,22 +432,20 @@ export default function DashboardHome() {
       <AnimatePresence>
         {configOpen && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="bg-card/80 backdrop-blur-xl rounded-2xl border border-border/40 p-4 shadow-lg space-y-4">
+            <div className={`${widgetBg} rounded-[20px] border border-border/30 p-5 shadow-xl space-y-4`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-card-foreground">Dashboard Widgets</h3>
-                <span className="text-[10px] text-muted-foreground font-medium">{visibleWidgets.length}/{widgetDefinitions.length} visible</span>
+                <h3 className="text-sm font-bold text-card-foreground">Customize Dashboard</h3>
+                <span className="text-[10px] text-muted-foreground/50 font-semibold">{visibleWidgets.length}/{widgetDefinitions.length} visible</span>
               </div>
               {['overview', 'productivity', 'business', 'platforms'].map(cat => (
                 <div key={cat}>
-                  <div className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-wider mb-2">{cat}</div>
+                  <div className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[2px] mb-2">{cat}</div>
                   <div className="flex flex-wrap gap-2">
                     {widgetDefinitions.filter(w => w.category === cat).map(w => (
                       <button key={w.id} onClick={() => toggleWidgetVisibility(w.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${visibility[w.id] !== false ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : 'bg-secondary/50 text-muted-foreground'}`}
-                      >
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${visibility[w.id] !== false ? 'bg-primary/10 text-primary ring-1 ring-primary/15' : 'bg-secondary/40 text-muted-foreground/50 hover:text-muted-foreground'}`}>
                         {visibility[w.id] !== false ? <Eye size={12} /> : <EyeOff size={12} />}
-                        <span>{w.icon}</span>
-                        <span className="truncate">{w.title}</span>
+                        <span>{w.icon}</span> {w.title}
                       </button>
                     ))}
                   </div>
@@ -479,7 +456,7 @@ export default function DashboardHome() {
         )}
       </AnimatePresence>
 
-      {/* Drag-and-Drop Grid */}
+      {/* Grid */}
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
@@ -490,15 +467,15 @@ export default function DashboardHome() {
         isResizable={!isLocked}
         onLayoutChange={handleLayoutChange}
         draggableHandle=".drag-handle"
-        margin={[16, 16]}
+        margin={[14, 14]}
         containerPadding={[0, 0]}
         useCSSTransforms
       >
         {visibleWidgets.map((widget, i) => (
           <div key={widget.id} className="relative group">
             {!isLocked && (
-              <div className="drag-handle absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing p-1 rounded-lg bg-card/80 backdrop-blur opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-border/30">
-                <GripVertical size={14} className="text-muted-foreground" />
+              <div className="drag-handle absolute top-2.5 left-2.5 z-10 cursor-grab active:cursor-grabbing p-1.5 rounded-xl bg-card/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-border/20">
+                <GripVertical size={13} className="text-muted-foreground/60" />
               </div>
             )}
             {renderWidget(widget.id, i)}

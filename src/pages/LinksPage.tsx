@@ -74,11 +74,11 @@ export default function LinksPage() {
                 <span className="text-sm font-medium text-card-foreground truncate">{link.title}</span>
               </div>
               <p className="text-xs text-muted-foreground truncate">{link.description}</p>
-              <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline truncate block mt-0.5">{link.url}</a>
+              <a href={link.url.match(/^https?:\/\//) ? link.url : `https://${link.url}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline truncate block mt-0.5">{link.url}</a>
               <span className="badge-muted text-[10px] mt-1.5">{link.category}</span>
             </div>
             <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary p-0.5"><ExternalLink size={13} /></a>
+              <a href={link.url.match(/^https?:\/\//) ? link.url : `https://${link.url}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary p-0.5"><ExternalLink size={13} /></a>
               <button onClick={() => navigator.clipboard.writeText(link.url)} className="text-muted-foreground hover:text-foreground p-0.5"><Copy size={13} /></button>
               <button onClick={() => togglePin(link.id)} className="text-muted-foreground hover:text-warning p-0.5">{link.pinned ? <PinOff size={13} /> : <Pin size={13} />}</button>
               <button onClick={() => openEdit(link)} className="text-muted-foreground hover:text-foreground p-0.5"><Edit2 size={13} /></button>
@@ -102,10 +102,10 @@ export default function LinksPage() {
         <FormField label="Description"><FormTextarea value={form.description} onChange={v => uf("description", v)} placeholder="What is this link for?" rows={2} /></FormField>
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Category">
-            <FormSelect value={form.category} onChange={v => uf("category", v)} options={["Tools","Documentation","Resources","APIs","Design","Learning","Social Media","Hosting","Domains","Other"].map(c => ({value:c,label:c}))} />
+            <FormSelect value={form.category} onChange={v => uf("category", v)} options={["Tools", "Documentation", "Resources", "APIs", "Design", "Learning", "Social Media", "Hosting", "Domains", "Other"].map(c => ({ value: c, label: c }))} />
           </FormField>
           <FormField label="Status">
-            <FormSelect value={form.status} onChange={v => uf("status", v as any)} options={[{value:"active",label:"Active"},{value:"archived",label:"Archived"}]} />
+            <FormSelect value={form.status} onChange={v => uf("status", v as any)} options={[{ value: "active", label: "Active" }, { value: "archived", label: "Archived" }]} />
           </FormField>
         </div>
       </FormModal>

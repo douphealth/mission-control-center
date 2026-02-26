@@ -156,8 +156,8 @@ export default function CredentialsPage() {
           <button
             onClick={() => setMasterLocked(!masterLocked)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${masterLocked
-                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+              ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+              : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
               }`}
           >
             {masterLocked ? <Lock size={15} /> : <Unlock size={15} />}
@@ -206,8 +206,8 @@ export default function CredentialsPage() {
               key={cat}
               onClick={() => setFilterCategory(cat)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${filterCategory === cat
-                  ? "bg-primary/10 text-primary"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                ? "bg-primary/10 text-primary"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}
             >
               {cat}
@@ -242,7 +242,7 @@ export default function CredentialsPage() {
                 </div>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   {cred.url && (
-                    <a href={cred.url} target="_blank" rel="noopener noreferrer"
+                    <a href={cred.url.match(/^https?:\/\//) ? cred.url : `https://${cred.url}`} target="_blank" rel="noopener noreferrer"
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                       <ExternalLink size={12} />
                     </a>

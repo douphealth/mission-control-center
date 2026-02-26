@@ -108,14 +108,21 @@ export default function WebsitesPage() {
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-1.5">
                   <Globe size={12} className="text-muted-foreground flex-shrink-0" />
-                  <a href={site.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate flex-1">{site.url}</a>
+                  <a href={site.url.match(/^https?:\/\//) ? site.url : `https://${site.url}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate flex-1">{site.url}</a>
                   <button onClick={() => copyText(site.url)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={11} /></button>
                 </div>
                 {site.wpAdminUrl && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-muted-foreground text-[11px]">🔧</span>
-                    <a href={site.wpAdminUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate flex-1">WP Admin</a>
+                    <a href={site.wpAdminUrl.match(/^https?:\/\//) ? site.wpAdminUrl : `https://${site.wpAdminUrl}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate flex-1">WP Admin</a>
                     <button onClick={() => copyText(site.wpAdminUrl)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={11} /></button>
+                  </div>
+                )}
+                {site.hostingLoginUrl && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground text-[11px]">🏠</span>
+                    <a href={site.hostingLoginUrl.match(/^https?:\/\//) ? site.hostingLoginUrl : `https://${site.hostingLoginUrl}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate flex-1">Hosting ({site.hostingProvider || 'Login'})</a>
+                    <button onClick={() => copyText(site.hostingLoginUrl)} className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={11} /></button>
                   </div>
                 )}
               </div>
@@ -150,8 +157,9 @@ export default function WebsitesPage() {
                 </div>
               )}
               <div className="flex items-center gap-2 pt-1">
-                <a href={site.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink size={12} /> Visit</a>
-                {site.wpAdminUrl && <a href={site.wpAdminUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">🔧 Admin</a>}
+                <a href={site.url.match(/^https?:\/\//) ? site.url : `https://${site.url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink size={12} /> Visit</a>
+                {site.wpAdminUrl && <a href={site.wpAdminUrl.match(/^https?:\/\//) ? site.wpAdminUrl : `https://${site.wpAdminUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">🔧 Admin</a>}
+                {site.hostingLoginUrl && <a href={site.hostingLoginUrl.match(/^https?:\/\//) ? site.hostingLoginUrl : `https://${site.hostingLoginUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">🏠 Hosting</a>}
                 <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEdit(site)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={13} /></button>
                   <button onClick={() => deleteWebsite(site.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={13} /></button>
