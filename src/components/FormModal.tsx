@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, forwardRef } from "react";
 
 interface FormModalProps {
   open: boolean;
@@ -12,8 +12,8 @@ interface FormModalProps {
   size?: "sm" | "md" | "lg";
 }
 
-export default function FormModal({ open, onClose, title, children, onSubmit, submitLabel = "Save", size = "md" }: FormModalProps) {
-  const ref = useRef<HTMLDivElement>(null);
+const FormModal = forwardRef<HTMLDivElement, FormModalProps>(({ open, onClose, title, children, onSubmit, submitLabel = "Save", size = "md" }, _ref) => {
+  const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -37,7 +37,7 @@ export default function FormModal({ open, onClose, title, children, onSubmit, su
         >
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" />
           <motion.div
-            ref={ref}
+            ref={innerRef}
             initial={{ scale: 0.95, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 12 }}
@@ -74,7 +74,10 @@ export default function FormModal({ open, onClose, title, children, onSubmit, su
       )}
     </AnimatePresence>
   );
-}
+});
+
+FormModal.displayName = "FormModal";
+export default FormModal;
 
 /* Reusable form field components */
 export function FormField({ label, children }: { label: string; children: React.ReactNode }) {
