@@ -4,7 +4,8 @@ import {
   Home, CheckSquare, Calendar, FileText, Timer,
   Globe, Github, Hammer, Link2, BarChart3,
   Search as SearchIcon, Cloud, Rocket, Bug,
-  Settings, Sun, Moon, X, Sparkles
+  Settings, Sun, Moon, X, Sparkles,
+  DollarSign, Lightbulb, KeyRound
 } from "lucide-react";
 
 const navGroups = [
@@ -25,7 +26,15 @@ const navGroups = [
       { id: "github", label: "GitHub Projects", icon: Github },
       { id: "builds", label: "Build Projects", icon: Hammer },
       { id: "links", label: "Links Hub", icon: Link2 },
-      { id: "projects", label: "Projects Tracker", icon: BarChart3 },
+      { id: "projects", label: "Kanban Board", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "BUSINESS",
+    items: [
+      { id: "payments", label: "Payments", icon: DollarSign },
+      { id: "ideas", label: "Ideas Board", icon: Lightbulb },
+      { id: "credentials", label: "Credential Vault", icon: KeyRound },
     ],
   },
   {
@@ -46,13 +55,21 @@ const navGroups = [
 ];
 
 export default function Sidebar() {
-  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen, theme, toggleTheme, userName, userRole, tasks } = useDashboard();
+  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen, theme, toggleTheme, userName, userRole, tasks, payments, ideas } = useDashboard();
 
   const openTaskCount = tasks.filter(t => t.status !== "done").length;
+  const overduePayments = payments.filter(p => p.status === "overdue").length;
+  const activeIdeas = ideas.filter(i => i.status === "exploring" || i.status === "validated").length;
+
+  const getBadge = (id: string): number | null => {
+    if (id === "tasks") return openTaskCount || null;
+    if (id === "payments" && overduePayments > 0) return overduePayments;
+    if (id === "ideas" && activeIdeas > 0) return activeIdeas;
+    return null;
+  };
 
   return (
     <>
-      {/* Mobile overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -71,7 +88,6 @@ export default function Sidebar() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{ width: 260 }}
       >
-        {/* Close on mobile */}
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground"
@@ -94,29 +110,29 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-5">
+        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
           {navGroups.map(group => (
             <div key={group.label}>
-              <div className="px-3 mb-2 text-[10px] font-semibold tracking-[1.5px] text-muted-foreground/50 uppercase">
+              <div className="px-3 mb-1.5 text-[10px] font-semibold tracking-[1.5px] text-muted-foreground/50 uppercase">
                 {group.label}
               </div>
               <div className="space-y-0.5">
                 {group.items.map(item => {
                   const active = activeSection === item.id;
-                  const badge = item.id === "tasks" ? openTaskCount : null;
+                  const badge = getBadge(item.id);
                   return (
                     <button
                       key={item.id}
                       onClick={() => { setActiveSection(item.id); setSidebarOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 group
                         ${active
                           ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
                         }`}
                     >
-                      <item.icon size={18} strokeWidth={active ? 2.2 : 1.8} className={active ? "" : "group-hover:scale-110 transition-transform"} />
+                      <item.icon size={17} strokeWidth={active ? 2.2 : 1.8} className={active ? "" : "group-hover:scale-110 transition-transform"} />
                       <span className="flex-1 text-left">{item.label}</span>
-                      {badge !== null && badge > 0 && (
+                      {badge !== null && (
                         <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{badge}</span>
                       )}
                     </button>
@@ -127,15 +143,15 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* Bottom: version + theme */}
+        {/* Bottom */}
         <div className="p-3 border-t border-sidebar-border space-y-1">
           <div className="flex items-center gap-2 px-3 py-1 text-[10px] text-muted-foreground/50">
             <Sparkles size={10} />
-            <span>Mission Control v4.0</span>
+            <span>Mission Control v5.0</span>
           </div>
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-foreground hover:bg-sidebar-accent/40 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-sidebar-foreground hover:bg-sidebar-accent/40 transition-all duration-200"
           >
             <motion.div
               key={theme}
@@ -143,7 +159,7 @@ export default function Sidebar() {
               animate={{ rotate: 0, opacity: 1 }}
               transition={{ duration: 0.3 }}
             >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
             </motion.div>
             <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
           </button>

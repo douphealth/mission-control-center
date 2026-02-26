@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { loadData, saveData, type Website, type Task, type GitHubRepo, type BuildProject, type LinkItem, type Note } from "@/lib/store";
+import { loadData, saveData, type Website, type Task, type GitHubRepo, type BuildProject, type LinkItem, type Note, type Payment, type Idea, type CredentialVault } from "@/lib/store";
 
 interface DashboardState {
   userName: string;
@@ -10,6 +10,9 @@ interface DashboardState {
   buildProjects: BuildProject[];
   links: LinkItem[];
   notes: Note[];
+  payments: Payment[];
+  ideas: Idea[];
+  credentials: CredentialVault[];
   activeSection: string;
   sidebarOpen: boolean;
   theme: "light" | "dark";

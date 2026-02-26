@@ -28,6 +28,9 @@ const quickAddItems = [
   { id: "links", label: "Link", emoji: "🔗" },
   { id: "notes", label: "Note", emoji: "📝" },
   { id: "projects", label: "Kanban Card", emoji: "📋" },
+  { id: "payments", label: "Payment", emoji: "💰" },
+  { id: "ideas", label: "Idea", emoji: "💡" },
+  { id: "credentials", label: "Credential", emoji: "🔐" },
 ];
 
 export default function TopBar() {

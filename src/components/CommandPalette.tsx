@@ -13,7 +13,14 @@ const sections = [
   { id: "github", label: "GitHub Projects", icon: Github, emoji: "🐙" },
   { id: "builds", label: "Build Projects", icon: Hammer, emoji: "🛠️" },
   { id: "links", label: "Links Hub", icon: Link2, emoji: "🔗" },
-  { id: "projects", label: "Projects Tracker", icon: BarChart3, emoji: "📊" },
+  { id: "projects", label: "Kanban Board", icon: BarChart3, emoji: "📊" },
+  { id: "payments", label: "Payments", icon: Settings, emoji: "💰" },
+  { id: "ideas", label: "Ideas Board", icon: Settings, emoji: "💡" },
+  { id: "credentials", label: "Credential Vault", icon: Settings, emoji: "🔐" },
+  { id: "seo", label: "SEO Center", icon: Settings, emoji: "🔍" },
+  { id: "cloudflare", label: "Cloudflare", icon: Settings, emoji: "☁️" },
+  { id: "vercel", label: "Vercel", icon: Settings, emoji: "🚀" },
+  { id: "openclaw", label: "OpenClaw", icon: Settings, emoji: "🐙" },
   { id: "settings", label: "Settings", icon: Settings, emoji: "⚙️" },
 ];
 

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Plus, Search, CheckCircle2, Circle, AlertTriangle, Edit2, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import FormModal, { FormField, FormInput, FormTextarea, FormSelect } from "@/components/FormModal";
 import type { Task } from "@/lib/store";
+import { toast } from "sonner";
 
 const priorityColors: Record<string, string> = { critical: "bg-destructive", high: "bg-warning", medium: "bg-primary", low: "bg-success" };
 const priorityLabels: Record<string, string> = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
@@ -47,12 +48,14 @@ export default function TasksPage() {
     if (!form.title.trim()) return;
     if (editId) {
       updateData({ tasks: tasks.map(t => t.id === editId ? { ...t, ...form } : t) });
+      toast.success("Task updated");
     } else {
       updateData({ tasks: [{ id: Math.random().toString(36).slice(2, 10), ...form, createdAt: new Date().toISOString().split("T")[0] }, ...tasks] });
+      toast.success("Task added");
     }
     setModalOpen(false);
   };
-  const deleteTask = (id: string) => { if (confirm("Delete this task?")) updateData({ tasks: tasks.filter(t => t.id !== id) }); };
+  const deleteTask = (id: string) => { if (confirm("Delete this task?")) { updateData({ tasks: tasks.filter(t => t.id !== id) }); toast.success("Task deleted"); } };
   const toggleExpand = (id: string) => setExpandedTasks(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleSubtask = (taskId: string, subId: string) => {
     updateData({ tasks: tasks.map(t => t.id === taskId ? { ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s) } : t) });
