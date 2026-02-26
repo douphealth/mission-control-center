@@ -4,7 +4,7 @@ import {
   Home, CheckSquare, Calendar, FileText, Timer,
   Globe, Github, Hammer, Link2, BarChart3,
   Search as SearchIcon, Cloud, Rocket, Bug,
-  Settings, Sun, Moon, ChevronLeft, Menu, X
+  Settings, Sun, Moon, X, Sparkles
 } from "lucide-react";
 
 const navGroups = [
@@ -46,7 +46,9 @@ const navGroups = [
 ];
 
 export default function Sidebar() {
-  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen, theme, toggleTheme, userName, userRole } = useDashboard();
+  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen, theme, toggleTheme, userName, userRole, tasks } = useDashboard();
+
+  const openTaskCount = tasks.filter(t => t.status !== "done").length;
 
   return (
     <>
@@ -80,14 +82,14 @@ export default function Sidebar() {
         {/* Profile */}
         <div className="p-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20">
               {userName.charAt(0)}
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-sm text-card-foreground truncate">{userName}</div>
               <div className="text-xs text-muted-foreground truncate">{userRole}</div>
             </div>
-            <div className="ml-auto w-2 h-2 rounded-full bg-success flex-shrink-0" />
+            <div className="ml-auto w-2.5 h-2.5 rounded-full bg-success flex-shrink-0 animate-pulse-ring" />
           </div>
         </div>
 
@@ -95,24 +97,28 @@ export default function Sidebar() {
         <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-5">
           {navGroups.map(group => (
             <div key={group.label}>
-              <div className="px-3 mb-1.5 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
+              <div className="px-3 mb-2 text-[10px] font-semibold tracking-[1.5px] text-muted-foreground/50 uppercase">
                 {group.label}
               </div>
               <div className="space-y-0.5">
                 {group.items.map(item => {
                   const active = activeSection === item.id;
+                  const badge = item.id === "tasks" ? openTaskCount : null;
                   return (
                     <button
                       key={item.id}
                       onClick={() => { setActiveSection(item.id); setSidebarOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
                         ${active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
                         }`}
                     >
-                      <item.icon size={18} strokeWidth={active ? 2.2 : 1.8} />
-                      <span>{item.label}</span>
+                      <item.icon size={18} strokeWidth={active ? 2.2 : 1.8} className={active ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {badge !== null && badge > 0 && (
+                        <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{badge}</span>
+                      )}
                     </button>
                   );
                 })}
@@ -121,13 +127,24 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* Theme toggle */}
-        <div className="p-4 border-t border-sidebar-border">
+        {/* Bottom: version + theme */}
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          <div className="flex items-center gap-2 px-3 py-1 text-[10px] text-muted-foreground/50">
+            <Sparkles size={10} />
+            <span>Mission Control v3.0</span>
+          </div>
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-foreground hover:bg-sidebar-accent/40 transition-all duration-200"
           >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            <motion.div
+              key={theme}
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </motion.div>
             <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
           </button>
         </div>

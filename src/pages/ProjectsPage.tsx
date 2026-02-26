@@ -1,13 +1,14 @@
-import { useDashboard } from "@/contexts/DashboardContext";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Plus, Edit2, Trash2, GripVertical } from "lucide-react";
+import FormModal, { FormField, FormInput, FormSelect, FormTagsInput } from "@/components/FormModal";
 
 const columns = [
-  { id: "ideas", label: "💡 Ideas", color: "bg-purple-500/10" },
-  { id: "backlog", label: "📋 Backlog", color: "bg-muted" },
-  { id: "in-progress", label: "🔨 In Progress", color: "bg-primary/10" },
-  { id: "review", label: "👀 Review", color: "bg-warning/10" },
-  { id: "completed", label: "✅ Completed", color: "bg-success/10" },
+  { id: "ideas", label: "💡 Ideas", color: "from-purple-500/20 to-purple-500/5" },
+  { id: "backlog", label: "📋 Backlog", color: "from-muted/40 to-muted/10" },
+  { id: "in-progress", label: "🔨 In Progress", color: "from-primary/20 to-primary/5" },
+  { id: "review", label: "👀 Review", color: "from-warning/20 to-warning/5" },
+  { id: "completed", label: "✅ Completed", color: "from-success/20 to-success/5" },
 ];
 
 interface KanbanCard {
@@ -18,88 +19,176 @@ interface KanbanCard {
   progress: number;
   deadline: string;
   tags: string[];
+  description: string;
 }
 
 const defaultCards: KanbanCard[] = [
-  { id: "k1", title: "AI SEO Audit Tool", priority: "P2", column: "ideas", progress: 0, deadline: "2026-04-01", tags: ["AI", "SEO"] },
-  { id: "k2", title: "Newsletter System", priority: "P3", column: "ideas", progress: 0, deadline: "", tags: ["automation"] },
-  { id: "k3", title: "Client Reporting Dashboard", priority: "P1", column: "backlog", progress: 10, deadline: "2026-03-15", tags: ["client", "dashboard"] },
-  { id: "k4", title: "Agency Site Redesign v2", priority: "P0", column: "in-progress", progress: 65, deadline: "2026-03-01", tags: ["client", "design"] },
-  { id: "k5", title: "Invoice Generator Polish", priority: "P2", column: "review", progress: 90, deadline: "2026-02-28", tags: ["tool"] },
-  { id: "k6", title: "WP Starter Theme v3", priority: "P3", column: "completed", progress: 100, deadline: "2026-02-15", tags: ["wordpress"] },
+  { id: "k1", title: "AI SEO Audit Tool", priority: "P2", column: "ideas", progress: 0, deadline: "2026-04-01", tags: ["AI", "SEO"], description: "Build an AI-powered SEO auditing tool" },
+  { id: "k2", title: "Newsletter System", priority: "P3", column: "ideas", progress: 0, deadline: "", tags: ["automation"], description: "Automated newsletter delivery system" },
+  { id: "k3", title: "Client Reporting Dashboard", priority: "P1", column: "backlog", progress: 10, deadline: "2026-03-15", tags: ["client", "dashboard"], description: "Dashboard for client analytics reporting" },
+  { id: "k4", title: "Agency Site Redesign v2", priority: "P0", column: "in-progress", progress: 65, deadline: "2026-03-01", tags: ["client", "design"], description: "Complete redesign of the agency website" },
+  { id: "k5", title: "Invoice Generator Polish", priority: "P2", column: "review", progress: 90, deadline: "2026-02-28", tags: ["tool"], description: "Final polish and bug fixes" },
+  { id: "k6", title: "WP Starter Theme v3", priority: "P3", column: "completed", progress: 100, deadline: "2026-02-15", tags: ["wordpress"], description: "WordPress starter theme update" },
 ];
 
-const priorityStyle: Record<string, string> = {
-  P0: "badge-destructive",
-  P1: "badge-warning",
-  P2: "badge-info",
-  P3: "badge-success",
+const priorityConfig: Record<string, { class: string; label: string }> = {
+  P0: { class: "badge-destructive", label: "Critical" },
+  P1: { class: "badge-warning", label: "High" },
+  P2: { class: "badge-info", label: "Medium" },
+  P3: { class: "badge-success", label: "Low" },
 };
+
+const emptyCard: Omit<KanbanCard, "id"> = { title: "", priority: "P2", column: "ideas", progress: 0, deadline: "", tags: [], description: "" };
 
 export default function ProjectsPage() {
   const [cards, setCards] = useState<KanbanCard[]>(() => {
-    try {
-      const saved = localStorage.getItem("mc-kanban");
-      return saved ? JSON.parse(saved) : defaultCards;
-    } catch { return defaultCards; }
+    try { const saved = localStorage.getItem("mc-kanban"); return saved ? JSON.parse(saved) : defaultCards; }
+    catch { return defaultCards; }
   });
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyCard);
 
   const save = (c: KanbanCard[]) => { setCards(c); localStorage.setItem("mc-kanban", JSON.stringify(c)); };
 
-  const onDragStart = (id: string) => setDragId(id);
+  const onDragStart = (e: React.DragEvent, id: string) => {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onDragOver = (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    setDragOverCol(colId);
+  };
+  const onDragLeave = () => setDragOverCol(null);
   const onDrop = (col: string) => {
     if (!dragId) return;
-    save(cards.map(c => c.id === dragId ? { ...c, column: col } : c));
+    const progress = col === "completed" ? 100 : undefined;
+    save(cards.map(c => c.id === dragId ? { ...c, column: col, ...(progress !== undefined ? { progress } : {}) } : c));
     setDragId(null);
+    setDragOverCol(null);
   };
 
+  const openAdd = (column: string) => { setEditId(null); setForm({ ...emptyCard, column }); setModalOpen(true); };
+  const openEdit = (card: KanbanCard) => { setEditId(card.id); const { id, ...rest } = card; setForm(rest); setModalOpen(true); };
+  const saveForm = () => {
+    if (!form.title.trim()) return;
+    if (editId) {
+      save(cards.map(c => c.id === editId ? { ...c, ...form } : c));
+    } else {
+      save([{ id: Math.random().toString(36).slice(2, 10), ...form }, ...cards]);
+    }
+    setModalOpen(false);
+  };
+  const deleteCard = (id: string) => save(cards.filter(c => c.id !== id));
+  const uf = (field: keyof typeof form, val: any) => setForm(f => ({ ...f, [field]: val }));
+
+  const isOverdue = (d: string) => d && d < new Date().toISOString().split("T")[0];
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-foreground">Projects Tracker</h1>
-      <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: 500 }}>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Projects Tracker</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{cards.length} projects across {columns.length} stages</p>
+        </div>
+        <button onClick={() => openAdd("ideas")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
+          <Plus size={16} /> New Project
+        </button>
+      </div>
+
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2" style={{ minHeight: 520 }}>
         {columns.map(col => {
           const colCards = cards.filter(c => c.column === col.id);
+          const isDragOver = dragOverCol === col.id;
           return (
             <div
               key={col.id}
-              className="flex-shrink-0 w-64 rounded-2xl bg-secondary/30 p-3"
-              onDragOver={e => e.preventDefault()}
+              className={`flex-shrink-0 w-72 rounded-2xl p-3 flex flex-col transition-all duration-200 ${isDragOver ? "bg-primary/5 ring-2 ring-primary/20 scale-[1.01]" : "bg-secondary/30"}`}
+              onDragOver={(e) => onDragOver(e, col.id)}
+              onDragLeave={onDragLeave}
               onDrop={() => onDrop(col.id)}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-sm font-semibold text-card-foreground">{col.label}</span>
-                <span className="text-xs text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center">{colCards.length}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-medium">{colCards.length}</span>
+                  <button onClick={() => openAdd(col.id)} className="text-muted-foreground hover:text-primary transition-colors p-0.5 rounded-md hover:bg-primary/10">
+                    <Plus size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 {colCards.map(card => (
                   <motion.div
                     key={card.id}
                     draggable
-                    onDragStart={() => onDragStart(card.id)}
+                    onDragStart={(e: any) => onDragStart(e, card.id)}
                     layout
-                    className="card-elevated p-3 cursor-grab active:cursor-grabbing space-y-2"
+                    layoutId={card.id}
+                    className={`card-elevated p-3.5 cursor-grab active:cursor-grabbing space-y-2.5 group/card ${dragId === card.id ? "opacity-40 scale-95" : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-1">
-                      <span className="text-sm font-medium text-card-foreground">{card.title}</span>
-                      <span className={`${priorityStyle[card.priority]} text-[10px] flex-shrink-0`}>{card.priority}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <GripVertical size={14} className="text-muted-foreground/40 mt-0.5 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                        <span className="text-sm font-medium text-card-foreground leading-snug">{card.title}</span>
+                      </div>
+                      <span className={`${priorityConfig[card.priority].class} text-[10px] flex-shrink-0`}>{card.priority}</span>
                     </div>
-                    {card.progress > 0 && (
-                      <div className="h-1 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${card.progress}%` }} />
+                    {card.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 pl-6">{card.description}</p>
+                    )}
+                    {card.progress > 0 && card.progress < 100 && (
+                      <div className="pl-6">
+                        <div className="flex justify-between text-[10px] text-muted-foreground mb-1"><span>Progress</span><span>{card.progress}%</span></div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${card.progress}%` }} />
+                        </div>
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-1">
-                      {card.tags.map(t => <span key={t} className="text-[9px] px-1 py-0.5 rounded bg-secondary text-secondary-foreground">{t}</span>)}
+                    <div className="flex flex-wrap gap-1 pl-6">
+                      {card.tags.map(t => <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground">{t}</span>)}
                     </div>
-                    {card.deadline && <span className="text-[10px] text-muted-foreground">{card.deadline}</span>}
+                    <div className="flex items-center justify-between pl-6">
+                      {card.deadline && (
+                        <span className={`text-[10px] ${isOverdue(card.deadline) && card.column !== "completed" ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          {isOverdue(card.deadline) && card.column !== "completed" ? "⚠️ " : "📅 "}{card.deadline}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-0.5 ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity">
+                        <button onClick={() => openEdit(card)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={11} /></button>
+                        <button onClick={() => deleteCard(card.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={11} /></button>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
+                {colCards.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground/50">
+                    <p className="text-xs">Drop cards here</p>
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editId ? "Edit Project" : "New Project Card"} onSubmit={saveForm}>
+        <FormField label="Title *"><FormInput value={form.title} onChange={v => uf("title", v)} placeholder="Project name" /></FormField>
+        <FormField label="Description"><FormInput value={form.description} onChange={v => uf("description", v)} placeholder="Brief description" /></FormField>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Priority">
+            <FormSelect value={form.priority} onChange={v => uf("priority", v)} options={[{value:"P0",label:"🔴 P0 - Critical"},{value:"P1",label:"🟠 P1 - High"},{value:"P2",label:"🟡 P2 - Medium"},{value:"P3",label:"🟢 P3 - Low"}]} />
+          </FormField>
+          <FormField label="Column">
+            <FormSelect value={form.column} onChange={v => uf("column", v)} options={columns.map(c => ({value:c.id, label:c.label}))} />
+          </FormField>
+          <FormField label="Progress %"><FormInput value={String(form.progress)} onChange={v => uf("progress", Math.min(100,parseInt(v)||0))} type="number" /></FormField>
+          <FormField label="Deadline"><FormInput value={form.deadline} onChange={v => uf("deadline", v)} type="date" /></FormField>
+        </div>
+        <FormField label="Tags"><FormTagsInput value={form.tags} onChange={v => uf("tags", v)} placeholder="Add tag and press Enter" /></FormField>
+      </FormModal>
     </div>
   );
 }
