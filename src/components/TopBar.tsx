@@ -1,47 +1,48 @@
-import { useDashboard } from "@/contexts/DashboardContext";
-import { Search, Bell, Plus, Menu, Globe, CheckSquare, Github, Hammer, Link2, FileText, BarChart3, Upload } from "lucide-react";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import CommandPalette from "./CommandPalette";
-import BulkImportModal from "./BulkImportModal";
+import { useDashboard } from '@/contexts/DashboardContext';
+import { Search, Bell, Plus, Menu, Upload, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import CommandPalette from './CommandPalette';
+import BulkImportModal from './BulkImportModal';
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h < 12) return "Good Morning";
-  if (h < 18) return "Good Afternoon";
-  return "Good Evening";
+  if (h < 12) return 'Good Morning';
+  if (h < 18) return 'Good Afternoon';
+  return 'Good Evening';
 }
 
 function formatDate() {
-  return new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "short", day: "numeric" });
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatTime() {
-  return new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 const quickAddItems = [
-  { id: "websites", label: "Website", emoji: "🌐" },
-  { id: "tasks", label: "Task", emoji: "✅" },
-  { id: "github", label: "GitHub Repo", emoji: "🐙" },
-  { id: "builds", label: "Build Project", emoji: "🛠️" },
-  { id: "links", label: "Link", emoji: "🔗" },
-  { id: "notes", label: "Note", emoji: "📝" },
-  { id: "projects", label: "Kanban Card", emoji: "📋" },
-  { id: "payments", label: "Payment", emoji: "💰" },
-  { id: "ideas", label: "Idea", emoji: "💡" },
-  { id: "credentials", label: "Credential", emoji: "🔐" },
+  { id: 'websites', label: 'Website', emoji: '🌐' },
+  { id: 'tasks', label: 'Task', emoji: '✅' },
+  { id: 'github', label: 'GitHub Repo', emoji: '🐙' },
+  { id: 'builds', label: 'Build Project', emoji: '🛠️' },
+  { id: 'links', label: 'Link', emoji: '🔗' },
+  { id: 'notes', label: 'Note', emoji: '📝' },
+  { id: 'projects', label: 'Kanban Card', emoji: '📋' },
+  { id: 'payments', label: 'Payment', emoji: '💰' },
+  { id: 'ideas', label: 'Idea', emoji: '💡' },
+  { id: 'credentials', label: 'Credential', emoji: '🔐' },
 ];
 
 export default function TopBar() {
-  const { userName, setSidebarOpen, setActiveSection, tasks } = useDashboard();
+  const { userName, setSidebarOpen, setActiveSection, tasks, exportAllData } = useDashboard();
   const [time, setTime] = useState(formatTime());
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
-  const overdueCount = tasks.filter(t => t.status !== "done" && t.dueDate < new Date().toISOString().split("T")[0]).length;
-  const dueTodayCount = tasks.filter(t => t.status !== "done" && t.dueDate === new Date().toISOString().split("T")[0]).length;
+  const today = new Date().toISOString().split('T')[0];
+  const overdueCount = tasks.filter(t => t.status !== 'done' && t.dueDate < today).length;
+  const dueTodayCount = tasks.filter(t => t.status !== 'done' && t.dueDate === today).length;
   const notifCount = overdueCount + dueTodayCount;
 
   useEffect(() => {
@@ -49,21 +50,20 @@ export default function TopBar() {
     return () => clearInterval(i);
   }, []);
 
-  // Ctrl+K global shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setCmdOpen(true); }
-      if ((e.metaKey || e.ctrlKey) && e.key === "n") { e.preventDefault(); setQuickAddOpen(true); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); setQuickAddOpen(true); }
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
     if (!quickAddOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setQuickAddOpen(false); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setQuickAddOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
   }, [quickAddOpen]);
 
   const handleQuickAdd = (sectionId: string) => {
@@ -71,37 +71,55 @@ export default function TopBar() {
     setQuickAddOpen(false);
   };
 
+  const handleExport = async () => {
+    const data = await exportAllData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mission-control-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  };
+
   return (
     <>
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-6 h-16 flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-background/70 backdrop-blur-2xl border-b border-border/40 px-4 lg:px-6 h-16 flex items-center gap-3">
         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground transition-colors">
           <Menu size={22} />
         </button>
 
         <div className="flex-1 min-w-0">
-          <h2 className="text-base font-semibold truncate text-foreground">
+          <h2 className="text-base font-bold truncate text-foreground">
             {getGreeting()}, {userName} 👋
           </h2>
-          <div className="text-xs text-muted-foreground hidden sm:block">{formatDate()} · {time}</div>
+          <div className="text-xs text-muted-foreground hidden sm:block font-medium">{formatDate()} · {time}</div>
         </div>
 
-        {/* Search trigger */}
+        {/* Search */}
         <button
           onClick={() => setCmdOpen(true)}
-          className="hidden md:flex items-center bg-secondary rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 cursor-pointer hover:bg-secondary/80 transition-colors"
+          className="hidden md:flex items-center bg-secondary/60 rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 cursor-pointer hover:bg-secondary/80 transition-colors border border-border/30"
         >
           <Search size={16} className="text-muted-foreground flex-shrink-0" />
           <span className="text-sm text-muted-foreground flex-1 text-left">Search everything...</span>
           <kbd className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
         </button>
 
-        {/* Import button */}
+        {/* Import */}
         <button
           onClick={() => setImportOpen(true)}
           className="hidden sm:flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors px-2.5 py-2 rounded-xl hover:bg-secondary"
           title="Bulk Import CSV/JSON"
         >
           <Upload size={18} />
+        </button>
+
+        {/* Export */}
+        <button
+          onClick={handleExport}
+          className="hidden sm:flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors px-2.5 py-2 rounded-xl hover:bg-secondary"
+          title="Export All Data"
+        >
+          <Download size={18} />
         </button>
 
         {/* Notifications */}
@@ -118,9 +136,9 @@ export default function TopBar() {
         <div className="relative">
           <button
             onClick={() => setQuickAddOpen(!quickAddOpen)}
-            className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-primary-foreground flex items-center justify-center hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
-            <Plus size={18} className={`transition-transform duration-200 ${quickAddOpen ? "rotate-45" : ""}`} />
+            <Plus size={18} className={`transition-transform duration-200 ${quickAddOpen ? 'rotate-45' : ''}`} />
           </button>
 
           <AnimatePresence>
@@ -132,9 +150,9 @@ export default function TopBar() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 z-50 w-56 bg-card rounded-2xl shadow-2xl border border-border p-2"
+                  className="absolute right-0 top-full mt-2 z-50 w-56 bg-card/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-border/50 p-2"
                 >
-                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Add</div>
+                  <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Quick Add</div>
                   {quickAddItems.map(item => (
                     <button
                       key={item.id}
@@ -145,7 +163,7 @@ export default function TopBar() {
                       <span className="font-medium">{item.label}</span>
                     </button>
                   ))}
-                  <div className="border-t border-border mt-1 pt-1">
+                  <div className="border-t border-border/50 mt-1 pt-1">
                     <button
                       onClick={() => { setQuickAddOpen(false); setImportOpen(true); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-card-foreground hover:bg-secondary transition-colors"

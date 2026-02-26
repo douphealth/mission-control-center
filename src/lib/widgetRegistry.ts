@@ -1,62 +1,98 @@
-// Widget Registry — config-driven, extensible widget system for Mission Control
-// Each widget is a self-contained unit with metadata for rendering on the dashboard
+// SOTA Widget Registry — config-driven, extensible, dynamic widget system
+// Each widget is a self-contained, draggable, resizable unit
 
-export interface WidgetConfig {
+export interface WidgetDefinition {
   id: string;
   type: string;
   title: string;
-  icon: string; // emoji
-  section: string; // which page section it links to
-  visible: boolean;
-  order: number;
-  size: "sm" | "md" | "lg" | "full"; // grid sizing
+  icon: string;
+  category: 'overview' | 'productivity' | 'business' | 'platforms' | 'personal' | 'custom';
+  defaultLayout: { w: number; h: number; minW?: number; minH?: number };
+  description: string;
 }
 
-const STORAGE_KEY = "mc-widget-config";
+export const widgetDefinitions: WidgetDefinition[] = [
+  // Overview
+  { id: 'stats', type: 'stats', title: 'Overview Stats', icon: '📊', category: 'overview', defaultLayout: { w: 12, h: 3, minW: 6, minH: 2 }, description: 'Key metrics at a glance' },
+  { id: 'activity', type: 'activity', title: 'Recent Activity', icon: '🕐', category: 'overview', defaultLayout: { w: 6, h: 5, minW: 4, minH: 3 }, description: 'Latest actions and events' },
+  { id: 'quick-links', type: 'quick-links', title: 'Quick Access', icon: '🔗', category: 'overview', defaultLayout: { w: 6, h: 5, minW: 4, minH: 3 }, description: 'Pinned links for fast access' },
+  { id: 'quote', type: 'quote', title: 'Daily Inspiration', icon: '✨', category: 'overview', defaultLayout: { w: 4, h: 3, minW: 3, minH: 2 }, description: 'Daily motivational quote' },
 
-export const defaultWidgets: WidgetConfig[] = [
-  { id: "stats", type: "stats", title: "Overview Stats", icon: "📊", section: "dashboard", visible: true, order: 0, size: "full" },
-  { id: "tasks-focus", type: "tasks-focus", title: "Today's Focus", icon: "⚡", section: "tasks", visible: true, order: 1, size: "md" },
-  { id: "deadlines", type: "deadlines", title: "Upcoming Deadlines", icon: "📅", section: "calendar", visible: true, order: 2, size: "md" },
-  { id: "activity", type: "activity", title: "Recent Activity", icon: "🕐", section: "dashboard", visible: true, order: 3, size: "md" },
-  { id: "quick-links", type: "quick-links", title: "Quick Access", icon: "🔗", section: "links", visible: true, order: 4, size: "md" },
-  { id: "platforms", type: "platforms", title: "Platform Status", icon: "🖥️", section: "dashboard", visible: true, order: 5, size: "md" },
-  { id: "finance", type: "finance", title: "Finance Summary", icon: "💰", section: "payments", visible: true, order: 6, size: "md" },
-  { id: "ideas", type: "ideas", title: "Top Ideas", icon: "💡", section: "ideas", visible: true, order: 7, size: "sm" },
-  { id: "quote", type: "quote", title: "Daily Quote", icon: "✨", section: "dashboard", visible: true, order: 8, size: "sm" },
-  { id: "notes-preview", type: "notes-preview", title: "Pinned Notes", icon: "📝", section: "notes", visible: true, order: 9, size: "sm" },
+  // Productivity
+  { id: 'tasks-focus', type: 'tasks-focus', title: "Today's Focus", icon: '⚡', category: 'productivity', defaultLayout: { w: 6, h: 6, minW: 4, minH: 4 }, description: 'Priority tasks for today' },
+  { id: 'deadlines', type: 'deadlines', title: 'Upcoming Deadlines', icon: '📅', category: 'productivity', defaultLayout: { w: 6, h: 6, minW: 4, minH: 4 }, description: 'Approaching due dates' },
+  { id: 'habits', type: 'habits', title: 'Habit Tracker', icon: '🎯', category: 'productivity', defaultLayout: { w: 6, h: 4, minW: 4, minH: 3 }, description: 'Track daily habits and streaks' },
+
+  // Business
+  { id: 'finance', type: 'finance', title: 'Finance Summary', icon: '💰', category: 'business', defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 }, description: 'Income, expenses, and profit' },
+  { id: 'ideas', type: 'ideas', title: 'Top Ideas', icon: '💡', category: 'business', defaultLayout: { w: 6, h: 5, minW: 4, minH: 3 }, description: 'Most voted ideas' },
+  { id: 'notes-preview', type: 'notes-preview', title: 'Pinned Notes', icon: '📝', category: 'business', defaultLayout: { w: 4, h: 4, minW: 3, minH: 3 }, description: 'Quick note access' },
+
+  // Platforms
+  { id: 'platforms', type: 'platforms', title: 'Platform Status', icon: '🖥️', category: 'platforms', defaultLayout: { w: 4, h: 4, minW: 3, minH: 3 }, description: 'Service status overview' },
+  { id: 'websites-summary', type: 'websites-summary', title: 'Websites Overview', icon: '🌐', category: 'platforms', defaultLayout: { w: 8, h: 4, minW: 6, minH: 3 }, description: 'Website status and quick access' },
 ];
 
-export function loadWidgetConfig(): WidgetConfig[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WidgetConfig[];
-      // Merge with defaults to add new widgets
-      const ids = new Set(parsed.map(w => w.id));
-      const merged = [...parsed];
-      for (const dw of defaultWidgets) {
-        if (!ids.has(dw.id)) merged.push(dw);
-      }
-      return merged.sort((a, b) => a.order - b.order);
+export function getDefaultLayouts(cols: number = 12): Array<{ i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number }> {
+  const layouts: Array<{ i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number }> = [];
+  let x = 0;
+  let y = 0;
+
+  for (const def of widgetDefinitions) {
+    const w = Math.min(def.defaultLayout.w, cols);
+    if (x + w > cols) {
+      x = 0;
+      y += 1;
     }
-  } catch {}
-  return [...defaultWidgets];
+    layouts.push({
+      i: def.id,
+      x,
+      y,
+      w,
+      h: def.defaultLayout.h,
+      minW: def.defaultLayout.minW,
+      minH: def.defaultLayout.minH,
+    });
+    x += w;
+    if (x >= cols) {
+      x = 0;
+      y += 1;
+    }
+  }
+
+  return layouts;
 }
 
-export function saveWidgetConfig(widgets: WidgetConfig[]) {
+const LAYOUT_KEY = 'mc-grid-layout-v7';
+const VISIBILITY_KEY = 'mc-widget-visibility-v7';
+
+export function loadSavedLayout() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
-  } catch {}
+    const raw = localStorage.getItem(LAYOUT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { }
+  return null;
 }
 
-export function toggleWidget(widgets: WidgetConfig[], id: string): WidgetConfig[] {
-  return widgets.map(w => w.id === id ? { ...w, visible: !w.visible } : w);
+export function saveLayout(layouts: any) {
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(layouts));
+  } catch { }
 }
 
-export function reorderWidgets(widgets: WidgetConfig[], fromIndex: number, toIndex: number): WidgetConfig[] {
-  const result = [...widgets];
-  const [removed] = result.splice(fromIndex, 1);
-  result.splice(toIndex, 0, removed);
-  return result.map((w, i) => ({ ...w, order: i }));
+export function loadWidgetVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(VISIBILITY_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { }
+  // All visible by default
+  const defaults: Record<string, boolean> = {};
+  widgetDefinitions.forEach(w => { defaults[w.id] = true; });
+  return defaults;
+}
+
+export function saveWidgetVisibility(visibility: Record<string, boolean>) {
+  try {
+    localStorage.setItem(VISIBILITY_KEY, JSON.stringify(visibility));
+  } catch { }
 }

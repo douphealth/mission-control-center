@@ -1,209 +1,549 @@
 import { useDashboard } from "@/contexts/DashboardContext";
-import { useState, useRef } from "react";
-import { Moon, Sun, Download, Upload, Trash2, AlertTriangle, Database, Palette, User, Shield, Info } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Moon, Sun, Download, Upload, Trash2, AlertTriangle, Database, Palette,
+  User, Shield, Info, Cloud, Copy, CheckCircle2, XCircle, RefreshCw,
+  Loader2, Key, ExternalLink, ChevronRight, Terminal, ArrowUpDown, Sliders,
+  Plug, ArrowDown, ArrowUp, Monitor
+} from "lucide-react";
+import {
+  getSupabaseConfig, setSupabaseConfig, clearSupabaseConfig,
+  testSupabaseConnection, pushToSupabase, pullFromSupabase,
+  isSupabaseConnected, SUPABASE_SCHEMA_SQL, getLastSyncTime
+} from "@/lib/supabase";
+import { generateStrongKey, setEncryptionKey, hasCustomEncryptionKey } from "@/lib/encryption";
+
+import { toast } from "sonner";
+
+const tabs = [
+  { id: "profile", label: "Profile", icon: User },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "supabase", label: "Supabase Sync", icon: Cloud },
+  { id: "security", label: "Security", icon: Shield },
+  { id: "data", label: "Data", icon: Database },
+  { id: "about", label: "About", icon: Info },
+];
+
+const themes = [
+  { id: "light", label: "Light", icon: Sun },
+  { id: "dark", label: "Dark", icon: Moon },
+  { id: "system", label: "System", icon: Monitor },
+];
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={copy} className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+      {copied ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
+    </button>
+  );
+}
 
 export default function SettingsPage() {
-  const { userName, userRole, theme, toggleTheme, updateData } = useDashboard();
+  const { userName, userRole, theme, setTheme, toggleTheme, updateData, exportAllData, importAllData } = useDashboard();
+  const [activeTab, setActiveTab] = useState("profile");
   const [name, setName] = useState(userName);
   const [role, setRole] = useState(userRole);
-  const [activeTab, setActiveTab] = useState("profile");
   const [confirmDelete, setConfirmDelete] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
 
+  // Supabase state
+  const [sbUrl, setSbUrl] = useState(getSupabaseConfig()?.url || "");
+  const [sbKey, setSbKey] = useState(getSupabaseConfig()?.anonKey || "");
+  const [sbConnected, setSbConnected] = useState(isSupabaseConnected());
+  const [sbTesting, setSbTesting] = useState(false);
+  const [sbTestResult, setSbTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [sbSyncing, setSbSyncing] = useState(false);
+  const [sbLastSync, setSbLastSync] = useState<string | null>(null);
+  const [showSchema, setShowSchema] = useState(false);
+
+  // Security state
+  const [encKey, setEncKey] = useState("");
+  const [showEncKey, setShowEncKey] = useState(false);
+  const [hasCustomKey, setHasCustomKey] = useState(hasCustomEncryptionKey());
+
+  useEffect(() => {
+    if (sbConnected) {
+      getLastSyncTime().then(setSbLastSync);
+    }
+  }, [sbConnected]);
+
+  useEffect(() => { setName(userName); }, [userName]);
+  useEffect(() => { setRole(userRole); }, [userRole]);
+
   const saveName = () => updateData({ userName: name, userRole: role });
 
-  const handleExport = () => {
-    const data = localStorage.getItem("mission-control-data");
-    const kanban = localStorage.getItem("mc-kanban");
-    const exported = { data: data ? JSON.parse(data) : {}, kanban: kanban ? JSON.parse(kanban) : [] };
-    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
+  const handleExport = async () => {
+    const data = await exportAllData();
+    const blob = new Blob([data], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `mission-control-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `mission-control-v8-backup-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
+    toast.success("Backup downloaded");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
-        const parsed = JSON.parse(ev.target?.result as string);
-        if (parsed.data) {
-          localStorage.setItem("mission-control-data", JSON.stringify(parsed.data));
-        }
-        if (parsed.kanban) {
-          localStorage.setItem("mc-kanban", JSON.stringify(parsed.kanban));
-        }
-        // If it's a flat structure (old format), treat as data
-        if (!parsed.data && !parsed.kanban && parsed.websites) {
-          localStorage.setItem("mission-control-data", JSON.stringify(parsed));
-        }
-        window.location.reload();
+        await importAllData(ev.target?.result as string);
+        toast.success("Data imported successfully");
+        setTimeout(() => window.location.reload(), 800);
       } catch {
-        alert("Invalid JSON file.");
+        toast.error("Invalid file or import failed.");
       }
     };
     reader.readAsText(file);
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (confirmDelete !== "DELETE") return;
-    localStorage.removeItem("mission-control-data");
-    localStorage.removeItem("mc-kanban");
-    localStorage.removeItem("mc-theme");
-    window.location.reload();
+    localStorage.clear();
+    const req = indexedDB.deleteDatabase("MissionControlDB");
+    req.onsuccess = () => { window.location.reload(); };
+    toast.success("All data cleared");
   };
 
-  const storageUsed = (JSON.stringify(localStorage).length / 1024).toFixed(1);
-  const storagePercent = Math.min(100, (JSON.stringify(localStorage).length / (5 * 1024 * 1024)) * 100);
+  // Supabase handlers
+  const handleTestConnection = async () => {
+    if (!sbUrl || !sbKey) { toast.error("Enter URL and anon key first"); return; }
+    setSbTesting(true);
+    setSbTestResult(null);
+    const result = await testSupabaseConnection(sbUrl, sbKey);
+    setSbTestResult({ ok: result.ok, msg: result.ok ? "Connected successfully!" : result.error || "Connection failed" });
+    setSbTesting(false);
+  };
 
-  const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "appearance", label: "Appearance", icon: Palette },
-    { id: "data", label: "Data", icon: Database },
-    { id: "about", label: "About", icon: Info },
-  ];
+  const handleSaveSupabase = () => {
+    if (!sbUrl || !sbKey) { toast.error("Both URL and anon key are required"); return; }
+    setSupabaseConfig(sbUrl, sbKey);
+    setSbConnected(true);
+    toast.success("Supabase connected & saved");
+  };
+
+  const handleDisconnectSupabase = () => {
+    clearSupabaseConfig();
+    setSbConnected(false);
+    setSbLastSync(null);
+    setSbTestResult(null);
+    toast.info("Supabase disconnected");
+  };
+
+  const handlePushToSupabase = async () => {
+    setSbSyncing(true);
+    const result = await pushToSupabase();
+    setSbSyncing(false);
+    if (result.success) {
+      toast.success(`Pushed ${result.synced} items to Supabase`);
+      setSbLastSync(new Date().toISOString());
+    } else {
+      toast.error(`Sync failed: ${result.error}`);
+    }
+  };
+
+  const handlePullFromSupabase = async () => {
+    setSbSyncing(true);
+    const result = await pullFromSupabase();
+    setSbSyncing(false);
+    if (result.success) {
+      toast.success(`Pulled ${result.synced} items from Supabase`);
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      toast.error(`Pull failed: ${result.error}`);
+    }
+  };
+
+  const handleGenerateEncKey = () => {
+    const key = generateStrongKey();
+    setEncKey(key);
+  };
+
+  const handleSaveEncKey = () => {
+    if (!encKey.trim()) { toast.error("Enter an encryption key"); return; }
+    setEncryptionKey(encKey.trim());
+    setHasCustomKey(true);
+    toast.success("Encryption key saved");
+  };
+
+  const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } };
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+    <div className="space-y-5 max-w-4xl">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your Mission Control preferences, sync, and security</p>
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Settings Nav */}
-        <div className="lg:w-48 flex lg:flex-col gap-1 overflow-x-auto">
+        {/* Sidebar nav */}
+        <div className="lg:w-52 flex lg:flex-col gap-1 overflow-x-auto hide-scrollbar">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === tab.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap w-full text-left
+                ${activeTab === tab.id
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
             >
-              <tab.icon size={16} />
+              <tab.icon size={15} />
               {tab.label}
+              {activeTab === tab.id && <ChevronRight size={13} className="ml-auto opacity-60" />}
             </button>
           ))}
         </div>
 
-        {/* Settings Content */}
-        <div className="flex-1 max-w-2xl space-y-4">
-          {activeTab === "profile" && (
-            <div className="card-elevated p-6 space-y-5">
-              <h2 className="font-semibold text-card-foreground text-lg">Profile Settings</h2>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-lg">
-                  {name.charAt(0)}
-                </div>
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Display Name</label>
-                    <input value={name} onChange={e => setName(e.target.value)} onBlur={saveName} className="w-full px-3 py-2.5 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-shadow" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Role / Title</label>
-                    <input value={role} onChange={e => setRole(e.target.value)} onBlur={saveName} className="w-full px-3 py-2.5 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-shadow" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "appearance" && (
-            <div className="card-elevated p-6 space-y-5">
-              <h2 className="font-semibold text-card-foreground text-lg">Appearance</h2>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Theme</label>
-                <div className="flex gap-2">
-                  <button onClick={() => { if (theme === "dark") toggleTheme(); }} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all ${theme === "light" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-                    <Sun size={18} /> Light
-                  </button>
-                  <button onClick={() => { if (theme === "light") toggleTheme(); }} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all ${theme === "dark" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-                    <Moon size={18} /> Dark
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "data" && (
-            <div className="space-y-4">
-              <div className="card-elevated p-6 space-y-4">
-                <h2 className="font-semibold text-card-foreground text-lg">Data Management</h2>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button onClick={handleExport} className="flex items-center gap-3 p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-left">
-                    <Download size={20} className="text-primary flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium text-card-foreground">Export All Data</div>
-                      <div className="text-xs text-muted-foreground">Download full backup as JSON</div>
+        {/* Content */}
+        <div className="flex-1 space-y-4">
+          <AnimatePresence mode="wait">
+            {/* ─── Profile ─── */}
+            {activeTab === "profile" && (
+              <motion.div key="profile" {...fadeIn} className="space-y-4">
+                <div className="card-elevated p-6 space-y-5">
+                  <h2 className="font-semibold text-lg">Profile</h2>
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center text-primary-foreground text-3xl font-bold shadow-lg shrink-0">
+                      {name.charAt(0).toUpperCase()}
                     </div>
-                  </button>
-                  <button onClick={() => importRef.current?.click()} className="flex items-center gap-3 p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-left">
-                    <Upload size={20} className="text-primary flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium text-card-foreground">Import Data</div>
-                      <div className="text-xs text-muted-foreground">Restore from JSON backup</div>
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Display Name</label>
+                        <input
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          onBlur={saveName}
+                          className="input-base"
+                          placeholder="Your name"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Role / Title</label>
+                        <input
+                          value={role}
+                          onChange={e => setRole(e.target.value)}
+                          onBlur={saveName}
+                          className="input-base"
+                          placeholder="Digital Creator & Developer"
+                        />
+                      </div>
                     </div>
-                  </button>
-                  <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-muted-foreground">Storage Usage</span>
-                    <span className="text-xs text-muted-foreground">{storageUsed} KB / 5 MB</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${storagePercent > 80 ? "bg-destructive" : storagePercent > 50 ? "bg-warning" : "bg-primary"}`}
-                      style={{ width: `${Math.max(1, storagePercent)}%` }}
-                    />
                   </div>
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              <div className="card-elevated p-6 space-y-4 border-destructive/20">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-destructive" />
-                  <h2 className="font-semibold text-destructive">Danger Zone</h2>
+            {/* ─── Appearance ─── */}
+            {activeTab === "appearance" && (
+              <motion.div key="appearance" {...fadeIn} className="space-y-4">
+                <div className="card-elevated p-6 space-y-5">
+                  <h2 className="font-semibold text-lg">Appearance</h2>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-3 block">Theme</label>
+                    <div className="flex gap-2">
+                      {themes.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTheme(t.id as any)}
+                          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${theme === t.id
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                            : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                            }`}
+                        >
+                          <t.icon size={17} />
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">This will permanently delete all your data including websites, tasks, projects, notes, links, and settings.</p>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground block">Type "DELETE" to confirm:</label>
-                  <input
-                    value={confirmDelete}
-                    onChange={e => setConfirmDelete(e.target.value)}
-                    placeholder='Type "DELETE"'
-                    className="w-full px-3 py-2.5 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-destructive/30 transition-shadow"
-                  />
-                  <button
-                    onClick={handleClearAll}
-                    disabled={confirmDelete !== "DELETE"}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              </motion.div>
+            )}
+
+            {/* ─── Supabase Sync ─── */}
+            {activeTab === "supabase" && (
+              <motion.div key="supabase" {...fadeIn} className="space-y-4">
+                {/* Status Banner */}
+                <div className={`rounded-2xl border p-4 flex items-center gap-3 ${sbConnected ? "bg-emerald-500/5 border-emerald-500/20" : "bg-amber-500/5 border-amber-500/20"
+                  }`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${sbConnected ? "bg-emerald-500/15" : "bg-amber-500/15"
+                    }`}>
+                    <Cloud size={17} className={sbConnected ? "text-emerald-500" : "text-amber-500"} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-semibold ${sbConnected ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                      {sbConnected ? "🟢 Supabase Connected" : "⚡ Supabase Not Connected"}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {sbConnected
+                        ? sbLastSync
+                          ? `Last sync: ${new Date(sbLastSync).toLocaleString()}`
+                          : "Ready to sync — no pushes yet"
+                        : "Connect your Supabase project for multi-device sync & backup"
+                      }
+                    </div>
+                  </div>
+                  {sbConnected && (
+                    <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer"
+                      className="text-xs font-medium text-primary hover:underline flex items-center gap-1 shrink-0">
+                      Dashboard <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
+
+                {/* Config */}
+                <div className="card-elevated p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg">Connection Settings</h2>
+                    {sbConnected && (
+                      <button onClick={handleDisconnectSupabase} className="text-xs text-destructive hover:underline font-medium">
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Project URL</label>
+                      <input
+                        value={sbUrl}
+                        onChange={e => setSbUrl(e.target.value)}
+                        className="input-base font-mono text-xs"
+                        placeholder="https://your-project.supabase.co"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Anon Key</label>
+                      <input
+                        value={sbKey}
+                        onChange={e => setSbKey(e.target.value)}
+                        type="password"
+                        className="input-base font-mono text-xs"
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      />
+                    </div>
+                  </div>
+
+                  {sbTestResult && (
+                    <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${sbTestResult.ok ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"
+                      }`}>
+                      {sbTestResult.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
+                      {sbTestResult.msg}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={handleTestConnection} disabled={sbTesting} className="btn-secondary text-sm gap-2.5">
+                      {sbTesting ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
+                      Test Connection
+                    </button>
+                    <button onClick={handleSaveSupabase} className="btn-primary text-sm">
+                      Save & Connect
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sync actions */}
+                {sbConnected && (
+                  <div className="card-elevated p-6 space-y-4">
+                    <h2 className="font-semibold text-lg">Sync Actions</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button onClick={handlePushToSupabase} disabled={sbSyncing} className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors text-left">
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          {sbSyncing ? <Loader2 size={16} className="text-primary animate-spin" /> : <ArrowUp size={16} className="text-primary" />}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-foreground">Push Local → Cloud</div>
+                          <div className="text-xs text-muted-foreground">Upload all data to Supabase</div>
+                        </div>
+                      </button>
+                      <button onClick={handlePullFromSupabase} disabled={sbSyncing} className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-colors text-left">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                          {sbSyncing ? <Loader2 size={16} className="text-emerald-500 animate-spin" /> : <ArrowDown size={16} className="text-emerald-500" />}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-foreground">Pull Cloud → Local</div>
+                          <div className="text-xs text-muted-foreground">Restore data from Supabase</div>
+                        </div>
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">⚠️ Pull will overwrite ALL local data with cloud data.</p>
+                  </div>
+                )}
+
+                {/* Schema */}
+                <div className="card-elevated p-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg flex items-center gap-2">
+                      <Terminal size={16} className="text-muted-foreground" /> Database Schema
+                    </h2>
+                    <button onClick={() => setShowSchema(!showSchema)} className="text-xs font-medium text-primary hover:underline">
+                      {showSchema ? "Hide" : "Show SQL"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    First time setup: Run this SQL in your Supabase SQL Editor to create all required tables.
+                  </p>
+                  {showSchema && (
+                    <div className="relative">
+                      <pre className="bg-secondary/50 rounded-xl p-4 text-[10px] font-mono text-muted-foreground overflow-auto max-h-60 leading-relaxed">
+                        {SUPABASE_SCHEMA_SQL.trim()}
+                      </pre>
+                      <div className="absolute top-2 right-2">
+                        <CopyButton text={SUPABASE_SCHEMA_SQL.trim()} />
+                      </div>
+                    </div>
+                  )}
+                  <a
+                    href="https://supabase.com/dashboard/project/_/editor"
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                   >
-                    <Trash2 size={14} /> Delete All Data
-                  </button>
+                    Open SQL Editor <ExternalLink size={10} />
+                  </a>
                 </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
 
-          {activeTab === "about" && (
-            <div className="card-elevated p-6 space-y-3">
-              <h2 className="font-semibold text-card-foreground text-lg">About Mission Control</h2>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p><span className="text-card-foreground font-medium">Version:</span> 4.0</p>
-                <p><span className="text-card-foreground font-medium">Stack:</span> React + TypeScript + Tailwind CSS + Framer Motion</p>
-                <p><span className="text-card-foreground font-medium">Storage:</span> localStorage (client-side)</p>
-                <p><span className="text-card-foreground font-medium">Features:</span> CSV/JSON import, command palette (⌘K), drag-and-drop Kanban, full CRUD on all sections</p>
-                <div className="pt-3 border-t border-border mt-3">
-                  <p>Made with ❤️ for productivity</p>
+            {/* ─── Security ─── */}
+            {activeTab === "security" && (
+              <motion.div key="security" {...fadeIn} className="space-y-4">
+                <div className="card-elevated p-6 space-y-5">
+                  <div className="flex items-center gap-2">
+                    <Key size={18} className="text-primary" />
+                    <h2 className="font-semibold text-lg">Encryption Key</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Your credential vault passwords and API keys are encrypted using AES-256.
+                    Set a custom master key below for enhanced security. Keep it safe — you'll need it to decrypt your data.
+                  </p>
+                  <div className={`rounded-xl p-3 ${hasCustomKey ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"} text-sm font-medium flex items-center gap-2`}>
+                    {hasCustomKey ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
+                    {hasCustomKey ? "Custom encryption key is set" : "Using default key — set a custom key for better security"}
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-xs font-semibold text-muted-foreground block">Encryption Key</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={encKey}
+                        onChange={e => setEncKey(e.target.value)}
+                        type={showEncKey ? "text" : "password"}
+                        className="input-base font-mono text-xs flex-1"
+                        placeholder="Enter or generate a strong key..."
+                      />
+                      <button
+                        onClick={() => setShowEncKey(!showEncKey)}
+                        className="btn-secondary px-3 text-xs shrink-0"
+                      >
+                        {showEncKey ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={handleGenerateEncKey} className="btn-secondary text-sm gap-2">
+                        <RefreshCw size={13} /> Generate Key
+                      </button>
+                      <button onClick={handleSaveEncKey} disabled={!encKey} className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                        Save Key
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+
+            {/* ─── Data ─── */}
+            {activeTab === "data" && (
+              <motion.div key="data" {...fadeIn} className="space-y-4">
+                <div className="card-elevated p-6 space-y-4">
+                  <h2 className="font-semibold text-lg">Backup & Restore</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onClick={handleExport} className="flex items-center gap-3 p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-left">
+                      <Download size={19} className="text-primary shrink-0" />
+                      <div>
+                        <div className="text-sm font-semibold text-foreground">Export All Data</div>
+                        <div className="text-xs text-muted-foreground">Download full JSON backup</div>
+                      </div>
+                    </button>
+                    <button onClick={() => importRef.current?.click()} className="flex items-center gap-3 p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-left">
+                      <Upload size={19} className="text-primary shrink-0" />
+                      <div>
+                        <div className="text-sm font-semibold text-foreground">Import Data</div>
+                        <div className="text-xs text-muted-foreground">Restore from JSON backup</div>
+                      </div>
+                    </button>
+                    <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+                  </div>
+                </div>
+
+                <div className="card-elevated p-6 space-y-4 border-destructive/20">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={17} className="text-destructive" />
+                    <h2 className="font-semibold text-destructive">Danger Zone</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently deletes ALL data — websites, tasks, notes, credentials, settings. This cannot be undone.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground block">Type "DELETE" to confirm:</label>
+                    <input
+                      value={confirmDelete}
+                      onChange={e => setConfirmDelete(e.target.value)}
+                      placeholder='DELETE'
+                      className="input-base max-w-xs"
+                    />
+                    <button
+                      onClick={handleClearAll}
+                      disabled={confirmDelete !== "DELETE"}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                    >
+                      <Trash2 size={14} /> Delete All Data
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ─── About ─── */}
+            {activeTab === "about" && (
+              <motion.div key="about" {...fadeIn} className="space-y-4">
+                <div className="card-elevated p-6 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center text-primary-foreground font-black text-xl shadow-lg">M</div>
+                    <div>
+                      <h2 className="font-bold text-xl">Mission Control</h2>
+                      <div className="badge-primary mt-1">v8.0 Enterprise</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {[
+                      { label: "Framework", value: "React 18 + TypeScript + Vite" },
+                      { label: "Styling", value: "Tailwind CSS + Framer Motion" },
+                      { label: "Storage", value: "IndexedDB (Dexie.js) — Offline-first" },
+                      { label: "Cloud Sync", value: "Supabase (optional)" },
+                      { label: "Encryption", value: "AES-256 via crypto-js" },
+                      { label: "Layout", value: "react-grid-layout — Drag & Drop" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <span className="text-muted-foreground font-medium">{label}</span>
+                        <span className="text-foreground font-semibold text-xs">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Built with ❤️ for infinite flexibility</span>
+                    <span className="badge-muted">Open Source</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

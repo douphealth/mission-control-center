@@ -1,131 +1,168 @@
-import { motion } from "framer-motion";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { useState } from "react";
-import { Plus, Edit2, Trash2, ExternalLink, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
-import FormModal, { FormField, FormInput, FormSelect, FormTagsInput } from "@/components/FormModal";
+import { motion } from "framer-motion";
+import {
+  Rocket, ExternalLink, GitBranch, CheckCircle2, Clock, AlertTriangle,
+  Globe, RefreshCw, Activity, Zap, Lock, Code2, BarChart3
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface VercelProject {
   id: string;
   name: string;
+  url: string;
+  liveUrl: string;
+  status: "ready" | "building" | "error" | "queued";
   framework: string;
-  productionUrl: string;
-  githubRepo: string;
-  latestStatus: "ready" | "error" | "building" | "cancelled";
-  latestCommit: string;
-  buildDuration: string;
-  deployedAt: string;
-  domains: string[];
+  lastDeployedAt: string;
+  branch: string;
+  credentialId?: string;
 }
 
-const defaults: VercelProject[] = [
-  { id: "v1", name: "SaaS Landing Page", framework: "Next.js", productionUrl: "https://saas-product.io", githubRepo: "alexdev/saas-landing", latestStatus: "ready", latestCommit: "feat: add pricing section", buildDuration: "42s", deployedAt: "2026-02-26", domains: ["saas-product.io", "saas-product.vercel.app"] },
-  { id: "v2", name: "AI Content Generator", framework: "React", productionUrl: "https://ai-content-gen.vercel.app", githubRepo: "alexdev/ai-content-gen", latestStatus: "ready", latestCommit: "fix: template loading", buildDuration: "38s", deployedAt: "2026-02-25", domains: ["ai-content-gen.vercel.app"] },
-  { id: "v3", name: "Mission Control", framework: "React + Vite", productionUrl: "https://mission-control.vercel.app", githubRepo: "alexdev/ai-mission-control", latestStatus: "ready", latestCommit: "feat: add payments module", buildDuration: "28s", deployedAt: "2026-02-26", domains: ["mission-control.vercel.app"] },
+const sampleProjects: VercelProject[] = [
+  { id: "vp1", name: "saas-product", url: "https://vercel.com/dashboard", liveUrl: "https://saas-product.io", status: "ready", framework: "Next.js", lastDeployedAt: "2026-02-26 09:14", branch: "main" },
+  { id: "vp2", name: "portfolio-next", url: "https://vercel.com/dashboard", liveUrl: "https://myportfolio.dev", status: "ready", framework: "Next.js", lastDeployedAt: "2026-02-18 14:33", branch: "main" },
+  { id: "vp3", name: "ai-content-gen", url: "https://vercel.com/dashboard", liveUrl: "https://ai-content-gen.vercel.app", status: "building", framework: "React", lastDeployedAt: "2026-02-26 13:55", branch: "feat/templates" },
+  { id: "vp4", name: "invoice-gen", url: "https://vercel.com/dashboard", liveUrl: "https://invoice-gen.vercel.app", status: "ready", framework: "React", lastDeployedAt: "2026-01-10 11:22", branch: "main" },
 ];
 
-const statusIcons: Record<string, { icon: any; class: string; label: string }> = {
-  ready: { icon: CheckCircle2, class: "text-success", label: "Ready" },
-  error: { icon: XCircle, class: "text-destructive", label: "Error" },
-  building: { icon: RefreshCw, class: "text-info animate-spin", label: "Building" },
-  cancelled: { icon: XCircle, class: "text-muted-foreground", label: "Cancelled" },
-};
+const vercelTools = [
+  { label: "Dashboard", url: "https://vercel.com/dashboard", icon: "🚀", desc: "Manage all deployments" },
+  { label: "Deployments", url: "https://vercel.com/dashboard", icon: "📦", desc: "Deployment history & logs" },
+  { label: "Domains", url: "https://vercel.com/dashboard", icon: "🌐", desc: "Custom domain management" },
+  { label: "Storage", url: "https://vercel.com/dashboard/stores", icon: "🗄️", desc: "KV, Blob, Postgres, Edge Config" },
+  { label: "Edge Config", url: "https://vercel.com/dashboard", icon: "⚡", desc: "Global edge configuration" },
+  { label: "Analytics", url: "https://vercel.com/analytics", icon: "📊", desc: "Real-user web analytics" },
+  { label: "Speed Insights", url: "https://vercel.com/dashboard", icon: "🏎️", desc: "Core Web Vitals tracking" },
+  { label: "Vercel AI SDK", url: "https://sdk.vercel.ai", icon: "🤖", desc: "Build AI apps with Vercel" },
+  { label: "v0.dev", url: "https://v0.dev", icon: "✨", desc: "AI UI generation" },
+  { label: "API Reference", url: "https://vercel.com/docs/rest-api", icon: "📖", desc: "REST API documentation" },
+  { label: "Status", url: "https://www.vercel-status.com", icon: "💚", desc: "Platform health & incidents" },
+  { label: "CLI Docs", url: "https://vercel.com/docs/cli", icon: "⌨️", desc: "Vercel CLI reference" },
+];
 
-const frameworkBadge: Record<string, string> = { "Next.js": "badge-primary", "React": "badge-info", "React + Vite": "badge-warning", "Nuxt": "badge-success", "Astro": "badge-muted" };
+function DeployBadge({ status }: { status: VercelProject["status"] }) {
+  const map = {
+    ready: { cls: "badge-success", label: "✅ Ready", pulse: false },
+    building: { cls: "badge-warning", label: "⟳ Building", pulse: true },
+    error: { cls: "badge-destructive", label: "✗ Error", pulse: false },
+    queued: { cls: "badge-muted", label: "⏳ Queued", pulse: false },
+  };
+  const { cls, label, pulse } = map[status];
+  return <span className={`badge ${cls} ${pulse ? "animate-pulse" : ""}`}>{label}</span>;
+}
 
 export default function VercelPage() {
-  const [projects, setProjects] = useState<VercelProject[]>(() => {
-    try { const s = localStorage.getItem("mc-vercel"); return s ? JSON.parse(s) : defaults; } catch { return defaults; }
-  });
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<VercelProject>>({});
+  const { credentials, buildProjects } = useDashboard();
+  const [projects] = useState<VercelProject[]>(sampleProjects);
+  const vercelCreds = credentials.filter(c => c.service.toLowerCase().includes("vercel") || c.label.toLowerCase().includes("vercel"));
 
-  const save = (p: VercelProject[]) => { setProjects(p); localStorage.setItem("mc-vercel", JSON.stringify(p)); };
-
-  const openAdd = () => { setEditId(null); setForm({ name: "", framework: "React", productionUrl: "", githubRepo: "", latestStatus: "ready", latestCommit: "", buildDuration: "", deployedAt: new Date().toISOString().split("T")[0], domains: [] }); setModalOpen(true); };
-  const openEdit = (p: VercelProject) => { setEditId(p.id); setForm(p); setModalOpen(true); };
-  const saveForm = () => {
-    if (!form.name) return;
-    if (editId) { save(projects.map(p => p.id === editId ? { ...p, ...form } as VercelProject : p)); toast.success("Project updated"); }
-    else { save([{ id: Math.random().toString(36).slice(2, 10), ...form } as VercelProject, ...projects]); toast.success("Project added"); }
-    setModalOpen(false);
-  };
-  const deleteProject = (id: string) => { save(projects.filter(p => p.id !== id)); toast.success("Removed"); };
+  const readyCount = projects.filter(p => p.status === "ready").length;
+  const buildingCount = projects.filter(p => p.status === "building").length;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Vercel Deployments</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{projects.length} projects · {projects.filter(p => p.latestStatus === "ready").length} deployed</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Rocket size={22} className="text-foreground" /> Vercel Deployments
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Monitor all deployments, preview URLs, and project health</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary text-sm text-card-foreground hover:bg-secondary/80 transition-colors">
-            🚀 Open Vercel
+          <a href="https://www.vercel-status.com" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15 transition-colors">
+            <Activity size={12} className="animate-pulse" /> Status
           </a>
-          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
-            <Plus size={16} /> Add Project
-          </button>
+          <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
+            Open Vercel <ExternalLink size={13} />
+          </a>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {projects.map((project, i) => {
-          const si = statusIcons[project.latestStatus] || statusIcons.ready;
-          return (
-            <motion.div key={project.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="card-elevated p-5 space-y-3 group">
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Projects", value: projects.length, icon: Rocket, color: "text-foreground bg-secondary" },
+          { label: "Live", value: readyCount, icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10" },
+          { label: "Building", value: buildingCount, icon: RefreshCw, color: "text-amber-500 bg-amber-500/10" },
+          { label: "Saved Creds", value: vercelCreds.length, icon: Lock, color: "text-violet-500 bg-violet-500/10" },
+        ].map(stat => (
+          <div key={stat.label} className="card-glass p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stat.color}`}>
+              <stat.icon size={17} />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-foreground">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Projects */}
+      <div className="space-y-3">
+        <h2 className="text-base font-bold flex items-center gap-2">
+          <Code2 size={15} className="text-primary" /> Projects
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {projects.map((proj, i) => (
+            <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+              className="card-elevated p-4 space-y-3">
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-card-foreground">{project.name}</h3>
-                  <span className={frameworkBadge[project.framework] || "badge-muted"}>{project.framework}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">{proj.name}</span>
+                    <DeployBadge status={proj.status} />
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="badge-muted capitalize">{proj.framework}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <GitBranch size={9} /> {proj.branch}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-1 text-xs ${si.class}`}>
-                    <si.icon size={14} /> {si.label}
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(project)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={13} /></button>
-                    <button onClick={() => deleteProject(project.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={13} /></button>
-                  </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <a href={proj.liveUrl} target="_blank" rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-secondary transition-colors" title="Visit live site">
+                    <Globe size={13} />
+                  </a>
+                  <a href={proj.url} target="_blank" rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-secondary transition-colors" title="Open Vercel project">
+                    <ExternalLink size={13} />
+                  </a>
                 </div>
               </div>
-              {project.productionUrl && (
-                <a href={project.productionUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-                  {project.productionUrl} <ExternalLink size={10} />
-                </a>
-              )}
-              <div className="bg-secondary/50 rounded-xl p-3 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-muted-foreground">Latest deploy:</span><span className="text-card-foreground font-medium">{project.latestCommit}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Build time:</span><span className="text-card-foreground">{project.buildDuration}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Deployed:</span><span className="text-card-foreground">{project.deployedAt}</span></div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Clock size={10} /> Last deployed: {proj.lastDeployedAt}
               </div>
-              {project.domains.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {project.domains.map(d => <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground">{d}</span>)}
-                </div>
-              )}
+              <a href={proj.liveUrl} target="_blank" rel="noopener noreferrer"
+                className="block text-[11px] font-mono text-primary/80 hover:text-primary hover:underline truncate">
+                {proj.liveUrl}
+              </a>
             </motion.div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editId ? "Edit Project" : "Add Vercel Project"} onSubmit={saveForm}>
-        <FormField label="Project Name *"><FormInput value={form.name || ""} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="My App" /></FormField>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="Framework">
-            <FormSelect value={form.framework || "React"} onChange={v => setForm(f => ({ ...f, framework: v }))} options={["Next.js","React","React + Vite","Nuxt","Astro","SvelteKit"].map(l => ({value:l,label:l}))} />
-          </FormField>
-          <FormField label="Status">
-            <FormSelect value={form.latestStatus || "ready"} onChange={v => setForm(f => ({ ...f, latestStatus: v as any }))} options={[{value:"ready",label:"✅ Ready"},{value:"error",label:"❌ Error"},{value:"building",label:"🔄 Building"}]} />
-          </FormField>
+      {/* Quick Access */}
+      <div>
+        <h2 className="text-base font-bold mb-3 flex items-center gap-2">
+          <Zap size={15} className="text-primary" /> Quick Access
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {vercelTools.map((tool, i) => (
+            <motion.a key={tool.label} href={tool.url} target="_blank" rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+              className="card-glass p-3.5 hover:border-primary/20 group transition-all block">
+              <div className="text-xl mb-2">{tool.icon}</div>
+              <div className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{tool.label}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{tool.desc}</div>
+            </motion.a>
+          ))}
         </div>
-        <FormField label="Production URL"><FormInput value={form.productionUrl || ""} onChange={v => setForm(f => ({ ...f, productionUrl: v }))} placeholder="https://..." /></FormField>
-        <FormField label="GitHub Repo"><FormInput value={form.githubRepo || ""} onChange={v => setForm(f => ({ ...f, githubRepo: v }))} placeholder="user/repo" /></FormField>
-        <FormField label="Latest Commit"><FormInput value={form.latestCommit || ""} onChange={v => setForm(f => ({ ...f, latestCommit: v }))} placeholder="feat: new feature" /></FormField>
-        <FormField label="Domains"><FormTagsInput value={form.domains || []} onChange={v => setForm(f => ({ ...f, domains: v }))} placeholder="Add domain" /></FormField>
-      </FormModal>
+      </div>
     </div>
   );
 }

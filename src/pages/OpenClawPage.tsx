@@ -1,139 +1,228 @@
-import { motion } from "framer-motion";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { useState } from "react";
-import { Plus, Edit2, Trash2, ExternalLink, Activity } from "lucide-react";
-import FormModal, { FormField, FormInput, FormSelect, FormTagsInput } from "@/components/FormModal";
+import { motion } from "framer-motion";
+import {
+  Bug, Activity, ExternalLink, Plus, Trash2, Edit2, Globe,
+  CheckCircle2, AlertTriangle, Clock, RefreshCw, Zap, Lock
+} from "lucide-react";
+import FormModal, { FormField, FormInput, FormSelect, FormTextarea } from "@/components/FormModal";
 import { toast } from "sonner";
 
-interface OCProject {
+// OpenClaw = generic service/API tracker — user can track any service
+interface ServiceEntry {
   id: string;
   name: string;
   url: string;
-  status: "active" | "paused" | "archived" | "building";
-  description: string;
-  techStack: string[];
-  lastActivity: string;
+  status: "operational" | "degraded" | "outage" | "maintenance";
+  category: string;
+  notes: string;
+  lastChecked: string;
 }
 
-const defaults: OCProject[] = [
-  { id: "oc1", name: "OpenClaw Dashboard", url: "https://openclaw.dev/dashboard", status: "active", description: "Main OpenClaw monitoring and management dashboard", techStack: ["React", "Node.js", "PostgreSQL"], lastActivity: "2026-02-25" },
+const defaultServices: ServiceEntry[] = [
+  { id: "oc1", name: "OpenClaw API", url: "https://openclaw.io", status: "operational", category: "API", notes: "Main API endpoint", lastChecked: "2026-02-26" },
+  { id: "oc2", name: "OpenClaw Dashboard", url: "https://app.openclaw.io", status: "operational", category: "Dashboard", notes: "", lastChecked: "2026-02-26" },
 ];
 
+const emptyForm: Omit<ServiceEntry, "id"> = {
+  name: "", url: "", status: "operational", category: "API", notes: "",
+  lastChecked: new Date().toISOString().split("T")[0],
+};
+
+function StatusBadge({ status }: { status: ServiceEntry["status"] }) {
+  const map = {
+    operational: { cls: "badge-success", label: "🟢 Operational" },
+    degraded: { cls: "badge-warning", label: "🟡 Degraded" },
+    outage: { cls: "badge-destructive", label: "🔴 Outage" },
+    maintenance: { cls: "badge-info", label: "🔵 Maintenance" },
+  };
+  const { cls, label } = map[status];
+  return <span className={`badge ${cls}`}>{label}</span>;
+}
+
 export default function OpenClawPage() {
-  const [projects, setProjects] = useState<OCProject[]>(() => {
-    try { const s = localStorage.getItem("mc-openclaw"); return s ? JSON.parse(s) : defaults; } catch { return defaults; }
-  });
+  const { credentials } = useDashboard();
+  const [services, setServices] = useState<ServiceEntry[]>(defaultServices);
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<OCProject>>({});
+  const [form, setForm] = useState<Omit<ServiceEntry, "id">>(emptyForm);
 
-  const save = (p: OCProject[]) => { setProjects(p); localStorage.setItem("mc-openclaw", JSON.stringify(p)); };
+  const ocCreds = credentials.filter(c =>
+    c.service.toLowerCase().includes("openclaw") ||
+    c.label.toLowerCase().includes("openclaw")
+  );
 
-  const openAdd = () => { setEditId(null); setForm({ name: "", url: "", status: "active", description: "", techStack: [], lastActivity: new Date().toISOString().split("T")[0] }); setModalOpen(true); };
-  const openEdit = (p: OCProject) => { setEditId(p.id); setForm(p); setModalOpen(true); };
-  const saveForm = () => {
-    if (!form.name) return;
-    if (editId) { save(projects.map(p => p.id === editId ? { ...p, ...form } as OCProject : p)); toast.success("Updated"); }
-    else { save([{ id: Math.random().toString(36).slice(2, 10), ...form } as OCProject, ...projects]); toast.success("Project added"); }
+  const operational = services.filter(s => s.status === "operational").length;
+  const issues = services.filter(s => s.status !== "operational").length;
+
+  const openAdd = () => {
+    setEditId(null);
+    setForm({ ...emptyForm, lastChecked: new Date().toISOString().split("T")[0] });
+    setModalOpen(true);
+  };
+
+  const openEdit = (s: ServiceEntry) => {
+    setEditId(s.id);
+    const { id, ...rest } = s;
+    setForm(rest);
+    setModalOpen(true);
+  };
+
+  const save = () => {
+    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    if (editId) {
+      setServices(prev => prev.map(s => s.id === editId ? { ...s, ...form } : s));
+      toast.success("Service updated");
+    } else {
+      setServices(prev => [{ id: Math.random().toString(36).slice(2), ...form }, ...prev]);
+      toast.success("Service added");
+    }
     setModalOpen(false);
   };
-  const deleteProject = (id: string) => { save(projects.filter(p => p.id !== id)); toast.success("Removed"); };
 
-  const statusBadge: Record<string, string> = { active: "badge-success", paused: "badge-warning", archived: "badge-muted", building: "badge-info" };
+  const del = (id: string) => {
+    if (!confirm("Remove this service?")) return;
+    setServices(prev => prev.filter(s => s.id !== id));
+    toast.success("Removed");
+  };
 
-  const serviceStatuses = [
-    { name: "API", status: "operational", latency: "45ms" },
-    { name: "Dashboard", status: "operational", latency: "120ms" },
-    { name: "Build Pipeline", status: "operational", latency: "—" },
-    { name: "CDN / Edge", status: "operational", latency: "12ms" },
-  ];
+  const uf = (k: keyof typeof form, v: any) => setForm(f => ({ ...f, [k]: v }));
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">OpenClaw Monitor</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{projects.length} projects tracked</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bug size={22} className="text-violet-500" /> OpenClaw
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Track OpenClaw services and API endpoints</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="https://openclaw.dev" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary text-sm text-card-foreground hover:bg-secondary/80 transition-colors">
-            🐙 Open OpenClaw
+          <a href="https://openclaw.io" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+            <Activity size={12} className="animate-pulse" /> System Status
           </a>
-          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
-            <Plus size={16} /> Add Project
+          <button onClick={openAdd} className="btn-primary text-sm">
+            <Plus size={14} /> Add Service
           </button>
         </div>
       </div>
 
-      {/* Service Status */}
-      <div className="card-elevated p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Activity size={16} className="text-success" />
-            <h3 className="font-semibold text-card-foreground text-sm">Platform Status</h3>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card-glass p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <CheckCircle2 size={17} className="text-emerald-500" />
           </div>
-          <span className="badge-success">🟢 Operational</span>
+          <div>
+            <div className="text-xl font-bold">{operational}</div>
+            <div className="text-xs text-muted-foreground">Operational</div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {serviceStatuses.map(s => (
-            <div key={s.name} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/30">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
-                <span className="text-xs text-card-foreground">{s.name}</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">{s.latency}</span>
-            </div>
-          ))}
+        <div className="card-glass p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+            <AlertTriangle size={17} className="text-red-500" />
+          </div>
+          <div>
+            <div className="text-xl font-bold">{issues}</div>
+            <div className="text-xs text-muted-foreground">Issues</div>
+          </div>
+        </div>
+        <div className="card-glass p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <Globe size={17} className="text-violet-500" />
+          </div>
+          <div>
+            <div className="text-xl font-bold">{services.length}</div>
+            <div className="text-xs text-muted-foreground">Services</div>
+          </div>
         </div>
       </div>
 
-      {/* Projects */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {projects.map((project, i) => (
-          <motion.div key={project.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-            className="card-elevated p-5 space-y-3 group">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-card-foreground">{project.name}</h3>
-                <span className={statusBadge[project.status]}>{project.status}</span>
+      {/* Services */}
+      <div className="space-y-2">
+        {services.map((s, i) => (
+          <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            className="card-elevated p-4 flex items-center gap-4 group">
+            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.status === "operational" ? "bg-emerald-500" :
+                s.status === "degraded" ? "bg-amber-500" :
+                  s.status === "outage" ? "bg-red-500" : "bg-blue-500"
+              }`} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-foreground">{s.name}</span>
+                <StatusBadge status={s.status} />
+                <span className="badge-muted">{s.category}</span>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => openEdit(project)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={13} /></button>
-                <button onClick={() => deleteProject(project.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={13} /></button>
-              </div>
+              {s.url && (
+                <a href={s.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] text-primary hover:underline flex items-center gap-1 mt-0.5">
+                  {s.url} <ExternalLink size={9} />
+                </a>
+              )}
+              {s.notes && <p className="text-[11px] text-muted-foreground mt-0.5">{s.notes}</p>}
             </div>
-            <p className="text-xs text-muted-foreground">{project.description}</p>
-            {project.url && (
-              <a href={project.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-                {project.url} <ExternalLink size={10} />
-              </a>
-            )}
-            {project.techStack.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {project.techStack.map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground">{t}</span>)}
-              </div>
-            )}
-            <div className="text-[10px] text-muted-foreground">Last activity: {project.lastActivity}</div>
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
+              <Clock size={9} /> {s.lastChecked}
+            </div>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <Edit2 size={12} />
+              </button>
+              <button onClick={() => del(s.id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                <Trash2 size={12} />
+              </button>
+              {s.url && (
+                <a href={s.url} target="_blank" rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-secondary transition-colors">
+                  <ExternalLink size={12} />
+                </a>
+              )}
+            </div>
           </motion.div>
         ))}
       </div>
 
-      {projects.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <div className="text-5xl mb-3">🐙</div>
-          <p className="font-medium">No OpenClaw projects</p>
-          <button onClick={openAdd} className="mt-3 text-sm text-primary hover:underline">+ Add project</button>
+      {/* Saved creds */}
+      {ocCreds.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold flex items-center gap-2"><Lock size={13} className="text-primary" /> Saved Credentials</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {ocCreds.map(c => (
+              <div key={c.id} className="card-glass p-3 space-y-1">
+                <div className="font-semibold text-sm">{c.label}</div>
+                <div className="text-xs text-muted-foreground">{c.username}</div>
+                {c.url && <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline flex items-center gap-1">Open <ExternalLink size={9} /></a>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editId ? "Edit Project" : "Add Project"} onSubmit={saveForm}>
-        <FormField label="Name *"><FormInput value={form.name || ""} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="Project name" /></FormField>
-        <FormField label="URL"><FormInput value={form.url || ""} onChange={v => setForm(f => ({ ...f, url: v }))} placeholder="https://..." /></FormField>
-        <FormField label="Description"><FormInput value={form.description || ""} onChange={v => setForm(f => ({ ...f, description: v }))} placeholder="Brief description" /></FormField>
-        <FormField label="Status">
-          <FormSelect value={form.status || "active"} onChange={v => setForm(f => ({ ...f, status: v as any }))} options={[{value:"active",label:"Active"},{value:"paused",label:"Paused"},{value:"building",label:"Building"},{value:"archived",label:"Archived"}]} />
+      {/* Add/Edit modal */}
+      <FormModal open={modalOpen} onClose={() => setModalOpen(false)} title={editId ? "Edit Service" : "Add Service"} onSubmit={save}>
+        <FormField label="Service Name *">
+          <FormInput value={form.name} onChange={v => uf("name", v)} placeholder="OpenClaw API v2" />
         </FormField>
-        <FormField label="Tech Stack"><FormTagsInput value={form.techStack || []} onChange={v => setForm(f => ({ ...f, techStack: v }))} placeholder="Add technology" /></FormField>
+        <FormField label="URL">
+          <FormInput value={form.url} onChange={v => uf("url", v)} placeholder="https://api.openclaw.io" />
+        </FormField>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Status">
+            <FormSelect value={form.status} onChange={v => uf("status", v)} options={[
+              { value: "operational", label: "Operational" },
+              { value: "degraded", label: "Degraded" },
+              { value: "outage", label: "Outage" },
+              { value: "maintenance", label: "Maintenance" },
+            ]} />
+          </FormField>
+          <FormField label="Category">
+            <FormInput value={form.category} onChange={v => uf("category", v)} placeholder="API, Dashboard, etc." />
+          </FormField>
+        </div>
+        <FormField label="Notes">
+          <FormTextarea value={form.notes} onChange={v => uf("notes", v)} rows={2} placeholder="Additional notes..." />
+        </FormField>
       </FormModal>
     </div>
   );

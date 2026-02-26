@@ -1,27 +1,27 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowRight, Home, CheckSquare, Calendar, FileText, Timer, Globe, Github, Hammer, Link2, BarChart3, Settings, Upload, Plus } from "lucide-react";
-import { useDashboard } from "@/contexts/DashboardContext";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Home, CheckSquare, Calendar, FileText, Timer, Globe, Github, Hammer, Link2, BarChart3, Settings, DollarSign, Lightbulb, KeyRound } from 'lucide-react';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 const sections = [
-  { id: "dashboard", label: "Dashboard", icon: Home, emoji: "🏠" },
-  { id: "tasks", label: "Tasks", icon: CheckSquare, emoji: "✅" },
-  { id: "calendar", label: "Calendar", icon: Calendar, emoji: "📅" },
-  { id: "notes", label: "Notes", icon: FileText, emoji: "📝" },
-  { id: "focus", label: "Focus Timer", icon: Timer, emoji: "🍅" },
-  { id: "websites", label: "My Websites", icon: Globe, emoji: "🌐" },
-  { id: "github", label: "GitHub Projects", icon: Github, emoji: "🐙" },
-  { id: "builds", label: "Build Projects", icon: Hammer, emoji: "🛠️" },
-  { id: "links", label: "Links Hub", icon: Link2, emoji: "🔗" },
-  { id: "projects", label: "Kanban Board", icon: BarChart3, emoji: "📊" },
-  { id: "payments", label: "Payments", icon: Settings, emoji: "💰" },
-  { id: "ideas", label: "Ideas Board", icon: Settings, emoji: "💡" },
-  { id: "credentials", label: "Credential Vault", icon: Settings, emoji: "🔐" },
-  { id: "seo", label: "SEO Center", icon: Settings, emoji: "🔍" },
-  { id: "cloudflare", label: "Cloudflare", icon: Settings, emoji: "☁️" },
-  { id: "vercel", label: "Vercel", icon: Settings, emoji: "🚀" },
-  { id: "openclaw", label: "OpenClaw", icon: Settings, emoji: "🐙" },
-  { id: "settings", label: "Settings", icon: Settings, emoji: "⚙️" },
+  { id: 'dashboard', label: 'Dashboard', icon: Home, emoji: '🏠' },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare, emoji: '✅' },
+  { id: 'calendar', label: 'Calendar', icon: Calendar, emoji: '📅' },
+  { id: 'notes', label: 'Notes', icon: FileText, emoji: '📝' },
+  { id: 'focus', label: 'Focus Timer', icon: Timer, emoji: '🍅' },
+  { id: 'websites', label: 'My Websites', icon: Globe, emoji: '🌐' },
+  { id: 'github', label: 'GitHub Projects', icon: Github, emoji: '🐙' },
+  { id: 'builds', label: 'Build Projects', icon: Hammer, emoji: '🛠️' },
+  { id: 'links', label: 'Links Hub', icon: Link2, emoji: '🔗' },
+  { id: 'projects', label: 'Kanban Board', icon: BarChart3, emoji: '📊' },
+  { id: 'payments', label: 'Payments', icon: DollarSign, emoji: '💰' },
+  { id: 'ideas', label: 'Ideas Board', icon: Lightbulb, emoji: '💡' },
+  { id: 'credentials', label: 'Credential Vault', icon: KeyRound, emoji: '🔐' },
+  { id: 'seo', label: 'SEO Center', icon: Settings, emoji: '🔍' },
+  { id: 'cloudflare', label: 'Cloudflare', icon: Settings, emoji: '☁️' },
+  { id: 'vercel', label: 'Vercel', icon: Settings, emoji: '🚀' },
+  { id: 'openclaw', label: 'OpenClaw', icon: Settings, emoji: '🐙' },
+  { id: 'settings', label: 'Settings', icon: Settings, emoji: '⚙️' },
 ];
 
 interface CommandPaletteProps {
@@ -31,13 +31,13 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ open, onClose, onImport }: CommandPaletteProps) {
-  const { setActiveSection, websites, tasks, repos, buildProjects, links, notes } = useDashboard();
-  const [query, setQuery] = useState("");
+  const { setActiveSection, websites, tasks, repos, buildProjects, links, notes, exportAllData, toggleTheme } = useDashboard();
+  const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
-      setQuery("");
+      setQuery('');
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
@@ -47,40 +47,41 @@ export default function CommandPalette({ open, onClose, onImport }: CommandPalet
 
     // Sections
     sections.forEach(s => {
-      items.push({ type: "Navigate", label: s.label, sub: "Go to section", action: () => { setActiveSection(s.id); onClose(); }, emoji: s.emoji });
+      items.push({ type: 'Navigate', label: s.label, sub: 'Go to section', action: () => { setActiveSection(s.id); onClose(); }, emoji: s.emoji });
     });
 
     // Actions
-    items.push({ type: "Action", label: "Bulk Import (CSV/JSON)", sub: "Import data from file", action: () => { onImport(); onClose(); }, emoji: "📥" });
-    items.push({ type: "Action", label: "Export All Data", sub: "Download backup JSON", action: () => {
-      const data = localStorage.getItem("mission-control-data");
-      if (!data) return;
-      const blob = new Blob([data], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `mission-control-backup-${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      onClose();
-    }, emoji: "📤" });
-    items.push({ type: "Action", label: "Toggle Dark Mode", sub: "Switch theme", action: () => { onClose(); }, emoji: "🌙" });
+    items.push({ type: 'Action', label: 'Bulk Import (CSV/JSON)', sub: 'Import data from file', action: () => { onImport(); onClose(); }, emoji: '📥' });
+    items.push({
+      type: 'Action', label: 'Export All Data', sub: 'Download backup JSON', action: async () => {
+        const data = await exportAllData();
+        const blob = new Blob([data], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `mission-control-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        onClose();
+      }, emoji: '📤'
+    });
+    items.push({ type: 'Action', label: 'Toggle Dark Mode', sub: 'Switch theme', action: () => { toggleTheme(); onClose(); }, emoji: '🌙' });
 
     // Data items
-    websites.forEach(w => items.push({ type: "Website", label: w.name, sub: w.url, action: () => { window.open(w.url, "_blank"); onClose(); }, emoji: "🌐" }));
-    tasks.filter(t => t.status !== "done").forEach(t => items.push({ type: "Task", label: t.title, sub: `${t.priority} · ${t.dueDate}`, action: () => { setActiveSection("tasks"); onClose(); }, emoji: "✅" }));
-    repos.forEach(r => items.push({ type: "Repo", label: r.name, sub: r.description.slice(0, 50), action: () => { window.open(r.url, "_blank"); onClose(); }, emoji: "🐙" }));
-    buildProjects.forEach(b => items.push({ type: "Build", label: b.name, sub: `${b.platform} · ${b.status}`, action: () => { setActiveSection("builds"); onClose(); }, emoji: "🛠️" }));
-    links.forEach(l => items.push({ type: "Link", label: l.title, sub: l.url, action: () => { window.open(l.url, "_blank"); onClose(); }, emoji: "🔗" }));
-    notes.forEach(n => items.push({ type: "Note", label: n.title, sub: n.content.slice(0, 40), action: () => { setActiveSection("notes"); onClose(); }, emoji: "📝" }));
+    websites.forEach(w => items.push({ type: 'Website', label: w.name, sub: w.url, action: () => { window.open(w.url, '_blank'); onClose(); }, emoji: '🌐' }));
+    tasks.filter(t => t.status !== 'done').forEach(t => items.push({ type: 'Task', label: t.title, sub: `${t.priority} · ${t.dueDate}`, action: () => { setActiveSection('tasks'); onClose(); }, emoji: '✅' }));
+    repos.forEach(r => items.push({ type: 'Repo', label: r.name, sub: r.description.slice(0, 50), action: () => { window.open(r.url, '_blank'); onClose(); }, emoji: '🐙' }));
+    buildProjects.forEach(b => items.push({ type: 'Build', label: b.name, sub: `${b.platform} · ${b.status}`, action: () => { setActiveSection('builds'); onClose(); }, emoji: '🛠️' }));
+    links.forEach(l => items.push({ type: 'Link', label: l.title, sub: l.url, action: () => { window.open(l.url, '_blank'); onClose(); }, emoji: '🔗' }));
+    notes.forEach(n => items.push({ type: 'Note', label: n.title, sub: n.content.slice(0, 40), action: () => { setActiveSection('notes'); onClose(); }, emoji: '📝' }));
 
     return items;
-  }, [websites, tasks, repos, buildProjects, links, notes, setActiveSection, onClose, onImport]);
+  }, [websites, tasks, repos, buildProjects, links, notes, setActiveSection, onClose, onImport, exportAllData, toggleTheme]);
 
   const filtered = query.trim()
     ? allItems.filter(item =>
-        item.label.toLowerCase().includes(query.toLowerCase()) ||
-        item.sub.toLowerCase().includes(query.toLowerCase()) ||
-        item.type.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 12)
+      item.label.toLowerCase().includes(query.toLowerCase()) ||
+      item.sub.toLowerCase().includes(query.toLowerCase()) ||
+      item.type.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 12)
     : allItems.slice(0, 10);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -88,10 +89,10 @@ export default function CommandPalette({ open, onClose, onImport }: CommandPalet
   useEffect(() => { setSelectedIndex(0); }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, filtered.length - 1)); }
-    if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
-    if (e.key === "Enter" && filtered[selectedIndex]) { filtered[selectedIndex].action(); }
-    if (e.key === "Escape") onClose();
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, filtered.length - 1)); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
+    if (e.key === 'Enter' && filtered[selectedIndex]) { filtered[selectedIndex].action(); }
+    if (e.key === 'Escape') onClose();
   };
 
   return (
@@ -110,10 +111,10 @@ export default function CommandPalette({ open, onClose, onImport }: CommandPalet
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: -12 }}
             transition={{ duration: 0.15 }}
-            className="relative w-full max-w-lg bg-card rounded-2xl shadow-2xl border border-border overflow-hidden"
+            className="relative w-full max-w-lg bg-card/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-border/50 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
               <Search size={18} className="text-muted-foreground flex-shrink-0" />
               <input
                 ref={inputRef}
@@ -132,14 +133,14 @@ export default function CommandPalette({ open, onClose, onImport }: CommandPalet
                   key={`${item.type}-${item.label}-${i}`}
                   onClick={item.action}
                   onMouseEnter={() => setSelectedIndex(i)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${selectedIndex === i ? "bg-primary/10" : "hover:bg-secondary/50"}`}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${selectedIndex === i ? 'bg-primary/10' : 'hover:bg-secondary/50'}`}
                 >
                   <span className="text-base flex-shrink-0">{item.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-card-foreground truncate">{item.label}</div>
                     <div className="text-[11px] text-muted-foreground truncate">{item.sub}</div>
                   </div>
-                  <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md flex-shrink-0">{item.type}</span>
+                  <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md flex-shrink-0 font-medium">{item.type}</span>
                 </button>
               ))}
               {filtered.length === 0 && (
@@ -147,7 +148,7 @@ export default function CommandPalette({ open, onClose, onImport }: CommandPalet
               )}
             </div>
 
-            <div className="border-t border-border px-4 py-2 flex items-center gap-4 text-[10px] text-muted-foreground">
+            <div className="border-t border-border/50 px-4 py-2 flex items-center gap-4 text-[10px] text-muted-foreground">
               <span>↑↓ Navigate</span>
               <span>↵ Select</span>
               <span>ESC Close</span>
