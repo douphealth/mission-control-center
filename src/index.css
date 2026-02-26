@@ -51,8 +51,8 @@
     --info: 210 80% 56%;
     --info-foreground: 0 0% 100%;
 
-    --card-shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.04), 0 4px 16px -2px hsl(0 0% 0% / 0.06);
-    --card-shadow-hover: 0 4px 12px 0 hsl(0 0% 0% / 0.06), 0 8px 32px -4px hsl(0 0% 0% / 0.1);
+    --card-shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.03), 0 4px 20px -4px hsl(0 0% 0% / 0.06);
+    --card-shadow-hover: 0 4px 16px 0 hsl(0 0% 0% / 0.06), 0 12px 40px -8px hsl(0 0% 0% / 0.12);
 
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
@@ -99,8 +99,8 @@
     --warning: 38 92% 56%;
     --info: 210 80% 62%;
 
-    --card-shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 4px 16px -2px hsl(0 0% 0% / 0.3);
-    --card-shadow-hover: 0 4px 12px 0 hsl(0 0% 0% / 0.3), 0 8px 32px -4px hsl(0 0% 0% / 0.4);
+    --card-shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 4px 20px -4px hsl(0 0% 0% / 0.3);
+    --card-shadow-hover: 0 4px 16px 0 hsl(0 0% 0% / 0.3), 0 12px 40px -8px hsl(0 0% 0% / 0.4);
   }
 }
 
@@ -112,6 +112,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Custom scrollbar */
@@ -123,22 +125,29 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.2);
+    background: hsl(var(--muted-foreground) / 0.15);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.35);
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.15) transparent;
   }
 }
 
 @layer utilities {
   .card-elevated {
-    @apply bg-card text-card-foreground rounded-2xl;
+    @apply bg-card text-card-foreground rounded-2xl border border-border/50;
     box-shadow: var(--card-shadow);
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
   }
   .card-elevated:hover {
     box-shadow: var(--card-shadow-hover);
+    border-color: hsl(var(--border));
   }
 
   .badge-success {
@@ -168,5 +177,10 @@
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
     background: hsl(var(--primary) / 0.12);
     color: hsl(var(--primary));
+  }
+
+  /* Improved focus states */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }
