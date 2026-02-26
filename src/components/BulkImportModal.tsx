@@ -7,6 +7,8 @@ import {
   TARGET_META,
   autonomousImport,
   generateTemplate,
+  autoMapFields,
+  normalizeItems,
   type AutonomousImportResult,
 } from '@/lib/importEngine';
 
@@ -86,20 +88,19 @@ export default function BulkImportModal({ open, onClose }: { open: boolean; onCl
   const handleConfirmImport = async () => {
     if (!result) return;
 
-    // If user changed target, re-process with that target
     const cat = result.categories[0];
     if (!cat) return;
 
     setPhase('importing');
     try {
       const target = selectedTarget || cat.target;
-      const items = target !== cat.target
-        ? (() => {
-            const { normalizeItems, autoMapFields } = require('@/lib/importEngine');
-            const fieldMap = autoMapFields(result.parsedData.sourceFields, target);
-            return normalizeItems(result.parsedData.rows, target, fieldMap);
-          })()
-        : cat.items;
+      let items = cat.items;
+
+      // If user changed target, re-map with the new target
+      if (target !== cat.target) {
+        const fieldMap = autoMapFields(result.parsedData.sourceFields, target);
+        items = normalizeItems(result.parsedData.rows, target, fieldMap);
+      }
 
       await bulkAddItems(target, items);
       setImportCount(items.length);
