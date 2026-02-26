@@ -22,7 +22,7 @@ export default function StatusBar() {
           <span className="flex items-center gap-1 text-destructive"><span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" /> Offline</span>
         )}
         <span className="hidden sm:inline">·</span>
-        <span className="hidden sm:inline">Mission Control v4.0</span>
+        <span className="hidden sm:inline">Mission Control v6.0</span>
       </div>
       <div className="flex items-center gap-3">
         <span className="hidden sm:inline">⌘K Search</span>

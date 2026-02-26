@@ -147,7 +147,7 @@ export default function Sidebar() {
         <div className="p-3 border-t border-sidebar-border space-y-1">
           <div className="flex items-center gap-2 px-3 py-1 text-[10px] text-muted-foreground/50">
             <Sparkles size={10} />
-            <span>Mission Control v5.0</span>
+            <span>Mission Control v6.0</span>
           </div>
           <button
             onClick={toggleTheme}
