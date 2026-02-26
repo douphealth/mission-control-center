@@ -1,6 +1,6 @@
 import { useDashboard } from "@/contexts/DashboardContext";
 import { motion } from "framer-motion";
-import { Globe, Github, Hammer, CheckSquare, TrendingUp, TrendingDown, ExternalLink, Clock, ArrowRight, Zap } from "lucide-react";
+import { Globe, Github, Hammer, CheckSquare, TrendingUp, TrendingDown, ExternalLink, Clock, ArrowRight, Zap, Calendar, FileText, Target, Sparkles } from "lucide-react";
 
 const fadeUp = (i: number) => ({
   initial: { opacity: 0, y: 16 },
@@ -11,23 +11,30 @@ const fadeUp = (i: number) => ({
 export default function DashboardHome() {
   const { websites, repos, buildProjects, tasks, links, notes, setActiveSection } = useDashboard();
 
+  const today = new Date().toISOString().split("T")[0];
   const activeSites = websites.filter(w => w.status === "active").length;
   const openTasks = tasks.filter(t => t.status !== "done").length;
-  const dueToday = tasks.filter(t => t.dueDate === new Date().toISOString().split("T")[0] && t.status !== "done").length;
+  const dueToday = tasks.filter(t => t.dueDate === today && t.status !== "done").length;
   const activeBuilds = buildProjects.filter(b => b.status !== "deployed").length;
-  const overdueTasks = tasks.filter(t => t.status !== "done" && t.dueDate < new Date().toISOString().split("T")[0]).length;
+  const overdueTasks = tasks.filter(t => t.status !== "done" && t.dueDate < today).length;
+  const completedToday = tasks.filter(t => t.completedAt === today).length;
 
   const stats = [
-    { label: "Websites", value: websites.length, sub: `${activeSites} active`, icon: Globe, trend: "+2", up: true, color: "from-blue-500/20 to-blue-500/5" },
-    { label: "GitHub Repos", value: repos.length, sub: "12 commits this week", icon: Github, trend: "+5", up: true, color: "from-purple-500/20 to-purple-500/5" },
-    { label: "Build Projects", value: buildProjects.length, sub: `${activeBuilds} in progress`, icon: Hammer, trend: "+1", up: true, color: "from-amber-500/20 to-amber-500/5" },
-    { label: "Open Tasks", value: openTasks, sub: dueToday > 0 ? `${dueToday} due today` : overdueTasks > 0 ? `${overdueTasks} overdue` : "All on track", icon: CheckSquare, trend: dueToday > 0 ? `${dueToday}` : "0", up: dueToday === 0, color: "from-emerald-500/20 to-emerald-500/5" },
+    { label: "Websites", value: websites.length, sub: `${activeSites} active`, icon: Globe, trend: `+${activeSites}`, up: true, gradient: "from-info/15 to-info/5", iconColor: "text-info" },
+    { label: "GitHub Repos", value: repos.length, sub: `${repos.filter(r => r.status === "active").length} in development`, icon: Github, trend: "+5", up: true, gradient: "from-purple-500/15 to-purple-500/5", iconColor: "text-purple-500" },
+    { label: "Build Projects", value: buildProjects.length, sub: `${activeBuilds} in progress`, icon: Hammer, trend: `+${activeBuilds}`, up: true, gradient: "from-warning/15 to-warning/5", iconColor: "text-warning" },
+    { label: "Open Tasks", value: openTasks, sub: dueToday > 0 ? `${dueToday} due today` : overdueTasks > 0 ? `${overdueTasks} overdue!` : "All on track ✨", icon: CheckSquare, trend: dueToday > 0 ? String(dueToday) : "0", up: overdueTasks === 0, gradient: overdueTasks > 0 ? "from-destructive/15 to-destructive/5" : "from-success/15 to-success/5", iconColor: overdueTasks > 0 ? "text-destructive" : "text-success" },
   ];
 
   const todayTasks = tasks.filter(t => t.status !== "done").sort((a, b) => {
     const p: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
     return (p[a.priority] || 3) - (p[b.priority] || 3);
-  }).slice(0, 5);
+  }).slice(0, 6);
+
+  const upcomingDeadlines = tasks
+    .filter(t => t.status !== "done" && t.dueDate >= today)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 6);
 
   const recentActivity = [
     { text: "Deployed SaaS Landing Page to Vercel", time: "2h ago", icon: "🚀" },
@@ -40,24 +47,44 @@ export default function DashboardHome() {
 
   const quickLinks = links.filter(l => l.pinned).slice(0, 6);
   const priorityColor: Record<string, string> = { critical: "bg-destructive", high: "bg-warning", medium: "bg-primary", low: "bg-success" };
+  const priorityBg: Record<string, string> = { critical: "bg-destructive/10 text-destructive", high: "bg-warning/10 text-warning", medium: "bg-primary/10 text-primary", low: "bg-success/10 text-success" };
 
   const quotes = [
     { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
     { text: "Ship fast, iterate faster.", author: "Reid Hoffman" },
     { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
     { text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
+    { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
   ];
   const quote = quotes[new Date().getDate() % quotes.length];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Summary bar */}
+      <motion.div {...fadeUp(0)} className="flex flex-wrap gap-3 items-center">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-success/10 text-success text-xs font-medium">
+          <Target size={12} /> {completedToday} done today
+        </div>
+        {overdueTasks > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium animate-pulse">
+            ⚠️ {overdueTasks} overdue
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-info/10 text-info text-xs font-medium">
+          <FileText size={12} /> {notes.length} notes
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles size={12} /> {links.length} links saved
+        </div>
+      </motion.div>
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
-          <motion.div key={s.label} {...fadeUp(i)} className="card-elevated p-5 hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => setActiveSection(s.label === "Websites" ? "websites" : s.label === "GitHub Repos" ? "github" : s.label === "Build Projects" ? "builds" : "tasks")}>
+          <motion.div key={s.label} {...fadeUp(i + 1)} className="card-elevated p-5 hover:scale-[1.02] transition-transform cursor-pointer group" onClick={() => setActiveSection(s.label === "Websites" ? "websites" : s.label === "GitHub Repos" ? "github" : s.label === "Build Projects" ? "builds" : "tasks")}>
             <div className="flex items-start justify-between">
-              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center`}>
-                <s.icon size={20} className="text-primary" />
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center`}>
+                <s.icon size={20} className={s.iconColor} />
               </div>
               <div className={`flex items-center gap-1 text-xs font-medium ${s.up ? "text-success" : "text-destructive"}`}>
                 {s.up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
@@ -69,8 +96,7 @@ export default function DashboardHome() {
               <div className="text-sm font-medium text-muted-foreground">{s.label}</div>
               <div className="text-xs text-muted-foreground/70 mt-0.5">{s.sub}</div>
             </div>
-            {/* Sparkline */}
-            <svg className="mt-3 w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none">
+            <svg className="mt-3 w-full h-8 opacity-60 group-hover:opacity-100 transition-opacity" viewBox="0 0 100 30" preserveAspectRatio="none">
               <defs>
                 <linearGradient id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
@@ -78,28 +104,30 @@ export default function DashboardHome() {
                 </linearGradient>
               </defs>
               <path d="M0,25 L15,20 L30,22 L45,15 L60,18 L75,10 L90,12 L100,5 L100,30 L0,30 Z" fill={`url(#grad-${i})`} />
-              <polyline fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points="0,25 15,20 30,22 45,15 60,18 75,10 90,12 100,5" />
+              <polyline fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,25 15,20 30,22 45,15 60,18 75,10 90,12 100,5" />
             </svg>
           </motion.div>
         ))}
       </div>
 
-      {/* Today's Focus & Recent Activity */}
+      {/* Today's Focus & Upcoming Deadlines */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <motion.div {...fadeUp(4)} className="card-elevated p-5">
+        <motion.div {...fadeUp(5)} className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Zap size={16} className="text-warning" />
               <h3 className="font-semibold text-card-foreground">Today's Focus</h3>
+              {dueToday > 0 && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{dueToday} due</span>}
             </div>
             <button onClick={() => setActiveSection("tasks")} className="text-xs text-primary hover:underline flex items-center gap-1">View All <ArrowRight size={12} /></button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {todayTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
+              <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors group/task">
                 <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${priorityColor[task.priority]}`} />
                 <span className="text-sm text-card-foreground flex-1 truncate">{task.title}</span>
-                <span className={`text-xs flex-shrink-0 ${task.dueDate < new Date().toISOString().split("T")[0] ? "text-destructive font-medium" : "text-muted-foreground"}`}>{task.dueDate}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${priorityBg[task.priority]}`}>{task.priority}</span>
+                <span className={`text-xs flex-shrink-0 ${task.dueDate < today ? "text-destructive font-medium" : "text-muted-foreground"}`}>{task.dueDate}</span>
               </div>
             ))}
             {todayTasks.length === 0 && (
@@ -108,14 +136,39 @@ export default function DashboardHome() {
           </div>
         </motion.div>
 
-        <motion.div {...fadeUp(5)} className="card-elevated p-5">
+        <motion.div {...fadeUp(6)} className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Clock size={16} className="text-info" />
+              <Calendar size={16} className="text-info" />
+              <h3 className="font-semibold text-card-foreground">Upcoming Deadlines</h3>
+            </div>
+            <button onClick={() => setActiveSection("calendar")} className="text-xs text-primary hover:underline flex items-center gap-1">Calendar <ArrowRight size={12} /></button>
+          </div>
+          <div className="space-y-1">
+            {upcomingDeadlines.map(task => (
+              <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priorityColor[task.priority]}`} />
+                <span className="text-sm text-card-foreground flex-1 truncate">{task.title}</span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">{task.dueDate}</span>
+              </div>
+            ))}
+            {upcomingDeadlines.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">No upcoming deadlines 🌟</div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Recent Activity & Quick Access */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <motion.div {...fadeUp(7)} className="card-elevated p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-muted-foreground" />
               <h3 className="font-semibold text-card-foreground">Recent Activity</h3>
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-0.5">
             {recentActivity.map((a, i) => (
               <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/30 transition-colors">
                 <span className="text-base flex-shrink-0">{a.icon}</span>
@@ -125,11 +178,8 @@ export default function DashboardHome() {
             ))}
           </div>
         </motion.div>
-      </div>
 
-      {/* Quick Access & Platform Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <motion.div {...fadeUp(6)} className="card-elevated p-5">
+        <motion.div {...fadeUp(8)} className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-card-foreground">Quick Access</h3>
             <button onClick={() => setActiveSection("links")} className="text-xs text-primary hover:underline flex items-center gap-1">All Links <ArrowRight size={12} /></button>
@@ -154,8 +204,11 @@ export default function DashboardHome() {
             )}
           </div>
         </motion.div>
+      </div>
 
-        <motion.div {...fadeUp(7)} className="card-elevated p-5">
+      {/* Platform Status & Quote */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <motion.div {...fadeUp(9)} className="card-elevated p-5">
           <h3 className="font-semibold text-card-foreground mb-4">Platform Status</h3>
           <div className="grid grid-cols-2 gap-2.5">
             {[
@@ -177,15 +230,14 @@ export default function DashboardHome() {
             ))}
           </div>
         </motion.div>
-      </div>
 
-      {/* Quote */}
-      <motion.div {...fadeUp(8)} className="card-elevated p-6 text-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-lg font-medium text-card-foreground italic leading-relaxed">
-          "{quote.text}"
-        </div>
-        <div className="text-sm text-muted-foreground mt-2">— {quote.author}</div>
-      </motion.div>
+        <motion.div {...fadeUp(10)} className="card-elevated p-6 flex flex-col justify-center bg-gradient-to-br from-primary/5 to-accent/5">
+          <div className="text-lg font-medium text-card-foreground italic leading-relaxed text-center">
+            "{quote.text}"
+          </div>
+          <div className="text-sm text-muted-foreground mt-2 text-center">— {quote.author}</div>
+        </motion.div>
+      </div>
     </div>
   );
 }
