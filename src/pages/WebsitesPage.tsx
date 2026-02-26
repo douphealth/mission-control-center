@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Plus, Search, ExternalLink, Copy, Eye, EyeOff, Globe, Edit2, Trash2, LayoutGrid, List } from "lucide-react";
 import FormModal, { FormField, FormInput, FormTextarea, FormSelect, FormTagsInput } from "@/components/FormModal";
 import type { Website } from "@/lib/store";
+import { toast } from "sonner";
 
 const statusBadge: Record<string, string> = { active: "badge-success", maintenance: "badge-warning", down: "badge-destructive", archived: "badge-muted" };
 const categoryColors: Record<string, string> = { "Client Site": "badge-info", "E-Commerce": "badge-primary", Personal: "badge-muted", Blog: "badge-success", SaaS: "badge-warning", Portfolio: "badge-primary" };
@@ -32,7 +33,7 @@ export default function WebsitesPage() {
     });
   };
 
-  const copyText = (text: string) => { navigator.clipboard.writeText(text); };
+  const copyText = (text: string) => { navigator.clipboard.writeText(text); toast.success("Copied!"); };
 
   const openAdd = () => { setEditId(null); setForm(emptyWebsite); setModalOpen(true); };
   const openEdit = (site: Website) => { setEditId(site.id); const { id, ...rest } = site; setForm(rest); setModalOpen(true); };
@@ -41,8 +42,10 @@ export default function WebsitesPage() {
     const now = new Date().toISOString().split("T")[0];
     if (editId) {
       updateData({ websites: websites.map(w => w.id === editId ? { ...w, ...form, lastUpdated: now } : w) });
+      toast.success("Website updated");
     } else {
       updateData({ websites: [{ id: Math.random().toString(36).slice(2, 10), ...form, dateAdded: now, lastUpdated: now }, ...websites] });
+      toast.success("Website added");
     }
     setModalOpen(false);
   };
@@ -50,6 +53,7 @@ export default function WebsitesPage() {
   const deleteWebsite = (id: string) => {
     if (!confirm("Delete this website?")) return;
     updateData({ websites: websites.filter(w => w.id !== id) });
+    toast.success("Website deleted");
   };
 
   const uf = (field: keyof typeof form, val: any) => setForm(f => ({ ...f, [field]: val }));

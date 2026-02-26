@@ -16,7 +16,13 @@ const FocusPage = lazy(() => import("@/pages/FocusPage"));
 const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
 const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const PlaceholderPage = lazy(() => import("@/pages/PlaceholderPage"));
+const PaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
+const IdeasPage = lazy(() => import("@/pages/IdeasPage"));
+const CredentialsPage = lazy(() => import("@/pages/CredentialsPage"));
+const SEOPage = lazy(() => import("@/pages/SEOPage"));
+const CloudflarePage = lazy(() => import("@/pages/CloudflarePage"));
+const VercelPage = lazy(() => import("@/pages/VercelPage"));
+const OpenClawPage = lazy(() => import("@/pages/OpenClawPage"));
 
 const sectionMap: Record<string, React.LazyExoticComponent<any>> = {
   dashboard: DashboardHome,
@@ -30,10 +36,13 @@ const sectionMap: Record<string, React.LazyExoticComponent<any>> = {
   calendar: CalendarPage,
   projects: ProjectsPage,
   settings: SettingsPage,
-  seo: PlaceholderPage,
-  cloudflare: PlaceholderPage,
-  vercel: PlaceholderPage,
-  openclaw: PlaceholderPage,
+  payments: PaymentsPage,
+  ideas: IdeasPage,
+  credentials: CredentialsPage,
+  seo: SEOPage,
+  cloudflare: CloudflarePage,
+  vercel: VercelPage,
+  openclaw: OpenClawPage,
 };
 
 export default function DashboardLayout() {
@@ -55,7 +64,6 @@ export default function DashboardLayout() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
-                
                 >
                   <Section sectionId={activeSection} key={activeSection} {...({sectionId: activeSection} as any)} />
                 </motion.div>

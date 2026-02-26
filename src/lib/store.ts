@@ -85,19 +85,68 @@ export interface Note {
   updatedAt: string;
 }
 
+export interface Payment {
+  id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  type: "income" | "expense" | "invoice" | "subscription";
+  status: "paid" | "pending" | "overdue" | "cancelled";
+  category: string;
+  from: string;
+  to: string;
+  dueDate: string;
+  paidDate: string;
+  recurring: boolean;
+  recurringInterval: string;
+  linkedProject: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface Idea {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: "high" | "medium" | "low";
+  status: "spark" | "exploring" | "validated" | "building" | "parked";
+  tags: string[];
+  linkedProject: string;
+  votes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CredentialVault {
+  id: string;
+  label: string;
+  service: string;
+  url: string;
+  username: string;
+  password: string;
+  apiKey: string;
+  notes: string;
+  category: string;
+  createdAt: string;
+}
+
 function genId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
 const STORAGE_KEY = "mission-control-data";
 
-interface StoreData {
+export interface StoreData {
   websites: Website[];
   tasks: Task[];
   repos: GitHubRepo[];
   buildProjects: BuildProject[];
   links: LinkItem[];
   notes: Note[];
+  payments: Payment[];
+  ideas: Idea[];
+  credentials: CredentialVault[];
   userName: string;
   userRole: string;
 }
@@ -153,13 +202,46 @@ function getDefaultData(): StoreData {
       { id: genId(), title: "Meeting Notes — Client Alpha", content: "Date: Feb 20, 2026\nAttendees: Alex, Sarah, Mike\n\nKey Points:\n- Website redesign approved for Phase 2\n- Budget increased to $15k\n- Deadline: March 30\n- Need mobile-first approach\n\nAction Items:\n1. Send updated wireframes by Feb 28\n2. Set up staging environment\n3. Schedule weekly check-ins", color: "amber", pinned: false, tags: ["meeting", "client"], createdAt: "2026-02-20", updatedAt: "2026-02-20" },
       { id: genId(), title: "Quick Reference Links", content: "Cloudflare API: https://api.cloudflare.com/client/v4/\nVercel API: https://api.vercel.com/\nGSC API: https://searchconsole.googleapis.com/\n\nUseful commands:\n- npm run build && npm run preview\n- git log --oneline -20\n- docker compose up -d", color: "green", pinned: false, tags: ["reference"], createdAt: "2026-01-15", updatedAt: "2026-02-10" },
     ],
+    payments: [
+      { id: genId(), title: "Agency Redesign Invoice", amount: 5000, currency: "USD", type: "income", status: "pending", category: "Freelance", from: "Client Alpha Corp", to: "Alex", dueDate: "2026-03-01", paidDate: "", recurring: false, recurringInterval: "", linkedProject: "Digital Marketing Agency", notes: "Phase 2 deposit", createdAt: "2026-02-20" },
+      { id: genId(), title: "SiteGround Hosting", amount: 14.99, currency: "USD", type: "subscription", status: "paid", category: "Hosting", from: "", to: "SiteGround", dueDate: "2026-03-15", paidDate: "2026-02-15", recurring: true, recurringInterval: "monthly", linkedProject: "", notes: "Covers 2 sites", createdAt: "2025-06-01" },
+      { id: genId(), title: "Cloudways Hosting", amount: 28, currency: "USD", type: "subscription", status: "paid", category: "Hosting", from: "", to: "Cloudways", dueDate: "2026-03-10", paidDate: "2026-02-10", recurring: true, recurringInterval: "monthly", linkedProject: "E-Commerce Fashion Store", notes: "", createdAt: "2025-08-01" },
+      { id: genId(), title: "Fashion Store Monthly Revenue", amount: 3200, currency: "USD", type: "income", status: "paid", category: "E-Commerce", from: "Fashion Store Sales", to: "Alex", dueDate: "", paidDate: "2026-02-25", recurring: true, recurringInterval: "monthly", linkedProject: "E-Commerce Fashion Store", notes: "February sales", createdAt: "2026-02-25" },
+      { id: genId(), title: "Figma Pro Subscription", amount: 12, currency: "USD", type: "subscription", status: "paid", category: "Tools", from: "", to: "Figma", dueDate: "2026-03-20", paidDate: "2026-02-20", recurring: true, recurringInterval: "monthly", linkedProject: "", notes: "", createdAt: "2025-04-01" },
+      { id: genId(), title: "Logo Design for Client", amount: 800, currency: "USD", type: "income", status: "overdue", category: "Freelance", from: "Beta Inc.", to: "Alex", dueDate: "2026-02-15", paidDate: "", recurring: false, recurringInterval: "", linkedProject: "", notes: "Follow up needed", createdAt: "2026-01-28" },
+      { id: genId(), title: "Domain Renewal — saas-product.io", amount: 35, currency: "USD", type: "expense", status: "paid", category: "Domains", from: "", to: "Namecheap", dueDate: "2026-01-05", paidDate: "2026-01-05", recurring: true, recurringInterval: "yearly", linkedProject: "SaaS Landing Page", notes: "", createdAt: "2026-01-05" },
+    ],
+    ideas: [
+      { id: genId(), title: "AI-Powered SEO Audit Tool", description: "Automated SEO auditing that scans sites and provides actionable recommendations using GPT. Could integrate with GSC data.", category: "SaaS Product", priority: "high", status: "exploring", tags: ["AI", "SEO", "SaaS"], linkedProject: "", votes: 5, createdAt: "2026-01-15", updatedAt: "2026-02-20" },
+      { id: genId(), title: "WordPress Plugin Marketplace", description: "A curated marketplace for premium WordPress plugins with reviews, demos, and one-click install.", category: "Platform", priority: "medium", status: "spark", tags: ["WordPress", "marketplace"], linkedProject: "", votes: 3, createdAt: "2026-02-01", updatedAt: "2026-02-01" },
+      { id: genId(), title: "Client Reporting Automation", description: "Auto-generate beautiful PDF reports from analytics data for clients. Pull from GSC, GA4, and social media APIs.", category: "Tool", priority: "high", status: "validated", tags: ["automation", "client", "reports"], linkedProject: "Client Portal App", votes: 8, createdAt: "2025-12-10", updatedAt: "2026-02-22" },
+      { id: genId(), title: "Personal Finance Dashboard", description: "Track income, expenses, subscriptions, and investments in one beautiful dashboard. Could be a standalone product.", category: "Personal", priority: "medium", status: "spark", tags: ["finance", "dashboard"], linkedProject: "", votes: 2, createdAt: "2026-02-18", updatedAt: "2026-02-18" },
+      { id: genId(), title: "Newsletter Growth System", description: "Build an automated system for growing newsletter subscribers. Landing pages, lead magnets, and drip sequences.", category: "Marketing", priority: "low", status: "parked", tags: ["newsletter", "marketing", "automation"], linkedProject: "", votes: 1, createdAt: "2026-01-25", updatedAt: "2026-01-25" },
+    ],
+    credentials: [
+      { id: genId(), label: "Cloudflare Account", service: "Cloudflare", url: "https://dash.cloudflare.com", username: "alex@email.com", password: "CF_s3cure!", apiKey: "cf_api_key_here", notes: "Main account managing 4 domains", category: "Infrastructure", createdAt: "2025-06-01" },
+      { id: genId(), label: "Vercel Account", service: "Vercel", url: "https://vercel.com/dashboard", username: "alex@email.com", password: "V3rc3l_prod!", apiKey: "vercel_token_here", notes: "Pro plan, 3 projects", category: "Hosting", createdAt: "2025-08-01" },
+      { id: genId(), label: "GitHub Account", service: "GitHub", url: "https://github.com", username: "alexdev", password: "GH_t0ken!", apiKey: "ghp_token_here", notes: "Personal access token for API", category: "Development", createdAt: "2024-11-01" },
+      { id: genId(), label: "Stripe Account", service: "Stripe", url: "https://dashboard.stripe.com", username: "alex@email.com", password: "Str1pe!", apiKey: "sk_live_xxx", notes: "Connected to SaaS Landing Page", category: "Payments", createdAt: "2025-09-01" },
+    ],
   };
 }
 
 export function loadData(): StoreData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Merge with defaults for new fields
+      const defaults = getDefaultData();
+      return {
+        ...defaults,
+        ...parsed,
+        payments: parsed.payments || defaults.payments,
+        ideas: parsed.ideas || defaults.ideas,
+        credentials: parsed.credentials || defaults.credentials,
+      };
+    }
   } catch {}
   const d = getDefaultData();
   saveData(d);
