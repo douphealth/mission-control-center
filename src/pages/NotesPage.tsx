@@ -55,16 +55,18 @@ export default function NotesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Notes</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{notes.length} notes · {notes.filter(n => n.pinned).length} pinned</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Notes</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{notes.length} notes · {notes.filter(n => n.pinned).length} pinned</p>
         </div>
-        <button onClick={addNote} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
-          <Plus size={16} /> New Note
+        <button onClick={addNote} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
+          <Plus size={16} /> <span className="hidden sm:inline">New</span> Note
         </button>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: 520 }}>
-        {/* List */}
-        <div className="space-y-2">
+
+      {/* Mobile: show list OR editor; Desktop: side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: 420 }}>
+        {/* List — on mobile, hide when a note is selected */}
+        <div className={`space-y-2 ${selectedId && 'hidden lg:block'}`}>
           <div className="flex items-center bg-secondary rounded-xl px-3 py-2 gap-2">
             <Search size={14} className="text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search notes..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full" />
@@ -98,15 +100,18 @@ export default function NotesPage() {
           </div>
         </div>
 
-        {/* Editor */}
-        <div className="lg:col-span-2 card-elevated p-5 flex flex-col">
+        {/* Editor — on mobile, show back button when note is selected */}
+        <div className={`lg:col-span-2 card-elevated p-4 sm:p-5 flex flex-col ${!selectedId && 'hidden lg:flex'}`}>
           {selected ? (
             <>
               <div className="flex items-center gap-2 mb-3">
+                <button onClick={() => setSelectedId(null)} className="lg:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground">
+                  <ChevronRight size={16} className="rotate-180" />
+                </button>
                 <input
                   value={selected.title}
                   onChange={e => updateNote("title", e.target.value)}
-                  className="text-xl font-bold text-card-foreground bg-transparent outline-none flex-1"
+                  className="text-lg sm:text-xl font-bold text-card-foreground bg-transparent outline-none flex-1"
                   placeholder="Note title..."
                 />
                 <button onClick={() => togglePin(selected.id)} className={`p-1.5 rounded-lg hover:bg-secondary transition-colors ${selected.pinned ? "text-warning" : "text-muted-foreground"}`}>

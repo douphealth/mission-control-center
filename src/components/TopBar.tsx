@@ -82,29 +82,26 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-background/70 backdrop-blur-2xl border-b border-border/40 px-4 lg:px-6 h-16 flex items-center gap-3">
-        <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground transition-colors">
-          <Menu size={22} />
-        </button>
-
+      <header className="sticky top-0 z-30 bg-background/70 backdrop-blur-2xl border-b border-border/40 px-3 sm:px-4 lg:px-6 h-14 sm:h-16 flex items-center gap-2 sm:gap-3">
+        {/* Mobile: greeting is compact */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-base font-bold truncate text-foreground">
+          <h2 className="text-sm sm:text-base font-bold truncate text-foreground">
             {getGreeting()}, {userName} 👋
           </h2>
-          <div className="text-xs text-muted-foreground hidden sm:block font-medium">{formatDate()} · {time}</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block font-medium">{formatDate()} · {time}</div>
         </div>
 
-        {/* Search */}
+        {/* Search — icon only on mobile, full bar on md+ */}
         <button
           onClick={() => setCmdOpen(true)}
-          className="hidden md:flex items-center bg-secondary/60 rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 cursor-pointer hover:bg-secondary/80 transition-colors border border-border/30"
+          className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-auto md:bg-secondary/60 rounded-xl sm:px-3 sm:py-2 sm:gap-2 md:w-64 lg:w-80 cursor-pointer hover:bg-secondary/80 transition-colors md:border md:border-border/30"
         >
-          <Search size={16} className="text-muted-foreground flex-shrink-0" />
-          <span className="text-sm text-muted-foreground flex-1 text-left">Search everything...</span>
-          <kbd className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+          <Search size={18} className="text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground flex-1 text-left hidden md:inline">Search everything...</span>
+          <kbd className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono hidden md:inline">⌘K</kbd>
         </button>
 
-        {/* Import */}
+        {/* Import — hidden on mobile */}
         <button
           onClick={() => setImportOpen(true)}
           className="hidden sm:flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors px-2.5 py-2 rounded-xl hover:bg-secondary"
@@ -113,7 +110,7 @@ export default function TopBar() {
           <Upload size={18} />
         </button>
 
-        {/* Export */}
+        {/* Export — hidden on mobile */}
         <button
           onClick={handleExport}
           className="hidden sm:flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors px-2.5 py-2 rounded-xl hover:bg-secondary"
@@ -124,7 +121,7 @@ export default function TopBar() {
 
         {/* Notifications */}
         <button className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-xl hover:bg-secondary">
-          <Bell size={20} />
+          <Bell size={18} />
           {notifCount > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center animate-pulse">
               {notifCount}

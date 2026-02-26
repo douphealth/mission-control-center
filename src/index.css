@@ -471,6 +471,21 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* ─── Mobile Touch Optimizations ─── */
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-card {
+      @apply rounded-xl;
+    }
+    
+    .card-elevated {
+      @apply rounded-xl;
+    }
+  }
 }
 
 /* ─── Custom Animations ─────────────────────────────────────────────── */

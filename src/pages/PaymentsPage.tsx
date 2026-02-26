@@ -56,14 +56,14 @@ export default function PaymentsPage() {
   const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Payments & Finance</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{payments.length} records{overdueCount > 0 && <span className="text-destructive font-medium"> · {overdueCount} overdue</span>}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Payments & Finance</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{payments.length} records{overdueCount > 0 && <span className="text-destructive font-medium"> · {overdueCount} overdue</span>}</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
-          <Plus size={16} /> Add Payment
+        <button onClick={openAdd} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-lg shadow-primary/20">
+          <Plus size={16} /> Add
         </button>
       </div>
 
@@ -90,15 +90,15 @@ export default function PaymentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center bg-secondary rounded-xl px-3 py-2 gap-2 max-w-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex items-center bg-secondary rounded-xl px-3 py-2 gap-2 flex-1 sm:max-w-xs">
           <Search size={14} className="text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search payments..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full" />
         </div>
-        <div className="flex items-center gap-1 bg-secondary rounded-xl p-1">
-          {["all", "income", "expense", "invoice", "subscription"].map(t => (
-            <button key={t} onClick={() => setFilterType(t)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === t ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {t === "all" ? `All (${payments.length})` : `${typeIcons[t]} ${t.charAt(0).toUpperCase() + t.slice(1)}`}
+        <div className="flex items-center gap-1 bg-secondary rounded-xl p-1 overflow-x-auto hide-scrollbar">
+          {["all", "income", "expense", "subscription"].map(t => (
+            <button key={t} onClick={() => setFilterType(t)} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap ${filterType === t ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              {t === "all" ? `All` : `${typeIcons[t]} ${t.charAt(0).toUpperCase() + t.slice(1)}`}
             </button>
           ))}
         </div>
@@ -108,33 +108,37 @@ export default function PaymentsPage() {
       <div className="space-y-2">
         {filtered.map((payment, i) => (
           <motion.div key={payment.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}
-            className="card-elevated p-4 flex items-center gap-4 group">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-lg flex-shrink-0">
-              {typeIcons[payment.type]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-card-foreground truncate">{payment.title}</span>
-                {payment.recurring && <RefreshCw size={10} className="text-muted-foreground flex-shrink-0" />}
+            className="card-elevated p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 group">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-secondary flex items-center justify-center text-lg flex-shrink-0">
+                {typeIcons[payment.type]}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-muted-foreground">{payment.category}</span>
-                {payment.linkedProject && <span className="text-[10px] text-primary">• {payment.linkedProject}</span>}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-card-foreground truncate">{payment.title}</span>
+                  {payment.recurring && <RefreshCw size={10} className="text-muted-foreground flex-shrink-0" />}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground">{payment.category}</span>
+                  {payment.linkedProject && <span className="text-[10px] text-primary hidden sm:inline">• {payment.linkedProject}</span>}
+                </div>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <div className={`text-sm font-bold ${payment.type === "income" || payment.type === "invoice" ? "text-success" : "text-card-foreground"}`}>
-                {payment.type === "income" || payment.type === "invoice" ? "+" : "-"}{fmt(payment.amount)}
+            <div className="flex items-center justify-between sm:justify-end gap-3">
+              <div className="text-left sm:text-right flex-shrink-0">
+                <div className={`text-sm font-bold ${payment.type === "income" || payment.type === "invoice" ? "text-success" : "text-card-foreground"}`}>
+                  {payment.type === "income" || payment.type === "invoice" ? "+" : "-"}{fmt(payment.amount)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">{payment.dueDate || payment.paidDate}</div>
               </div>
-              <div className="text-[10px] text-muted-foreground">{payment.dueDate || payment.paidDate}</div>
-            </div>
-            <span className={`${statusBadge[payment.status]} text-[10px] flex-shrink-0`}>{payment.status}</span>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {(payment.status === "pending" || payment.status === "overdue") && (
-                <button onClick={() => markPaid(payment.id)} className="text-xs text-success hover:underline px-1.5">Pay</button>
-              )}
-              <button onClick={() => openEdit(payment)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={12} /></button>
-              <button onClick={() => deletePayment(payment.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={12} /></button>
+              <span className={`${statusBadge[payment.status]} text-[10px] flex-shrink-0`}>{payment.status}</span>
+              <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                {(payment.status === "pending" || payment.status === "overdue") && (
+                  <button onClick={() => markPaid(payment.id)} className="text-[11px] text-success hover:underline px-1.5">Pay</button>
+                )}
+                <button onClick={() => openEdit(payment)} className="text-muted-foreground hover:text-foreground p-1"><Edit2 size={12} /></button>
+                <button onClick={() => deletePayment(payment.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 size={12} /></button>
+              </div>
             </div>
           </motion.div>
         ))}

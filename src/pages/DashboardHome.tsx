@@ -104,9 +104,9 @@ export default function DashboardHome() {
       case 'stats':
         return (
           <div className={`${widgetClass} p-0`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 h-full">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-0 h-full">
               {stats.map((s, si) => (
-                <motion.div key={s.label} {...fadeUp(si)} className="p-5 cursor-pointer group hover:bg-primary/5 transition-all border-r border-border/30 last:border-r-0 flex flex-col" onClick={() => setActiveSection(s.section)}>
+                <motion.div key={s.label} {...fadeUp(si)} className="p-3 sm:p-5 cursor-pointer group hover:bg-primary/5 transition-all border-b sm:border-b-0 sm:border-r border-border/30 last:border-0 flex flex-col" onClick={() => setActiveSection(s.section)}>
                   <div className="flex items-start justify-between">
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center`}>
                       <s.icon size={18} className={s.iconColor} />
@@ -116,10 +116,10 @@ export default function DashboardHome() {
                       {s.trend}
                     </div>
                   </div>
-                  <div className="mt-auto pt-3">
-                    <div className="text-3xl font-extrabold text-card-foreground tracking-tight">{s.value}</div>
-                    <div className="text-sm font-medium text-muted-foreground">{s.label}</div>
-                    <div className="text-xs text-muted-foreground/60 mt-0.5">{s.sub}</div>
+                  <div className="mt-auto pt-2 sm:pt-3">
+                    <div className="text-2xl sm:text-3xl font-extrabold text-card-foreground tracking-tight">{s.value}</div>
+                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">{s.label}</div>
+                    <div className="text-[10px] text-muted-foreground/60 mt-0.5 hidden sm:block">{s.sub}</div>
                   </div>
                 </motion.div>
               ))}
@@ -191,7 +191,7 @@ export default function DashboardHome() {
               </div>
               <button onClick={() => setActiveSection('payments')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">Details <ArrowRight size={12} /></button>
             </div>
-            <div className="grid grid-cols-3 gap-3 flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 flex-1">
               <div className="text-center p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center justify-center">
                 <ArrowUpRight size={18} className="text-emerald-500 mb-1" />
                 <div className="text-lg font-extrabold text-emerald-500">{fmt(totalIncome)}</div>
@@ -250,7 +250,7 @@ export default function DashboardHome() {
               <h3 className="font-bold text-card-foreground">Quick Access</h3>
               <button onClick={() => setActiveSection('links')} className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">All Links <ArrowRight size={12} /></button>
             </div>
-            <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1 content-start">
               {quickLinks.map(link => (
                 <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 transition-all group hover:scale-[1.02] border border-transparent hover:border-primary/10">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all">{link.title.charAt(0)}</div>
@@ -418,19 +418,19 @@ export default function DashboardHome() {
     <div className="space-y-4">
       {/* Header Controls */}
       <motion.div {...fadeUp(0)} className="flex flex-wrap gap-2 items-center justify-between">
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 text-xs font-semibold">
-            <Target size={12} /> {completedToday} done today
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
+          <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] sm:text-xs font-semibold">
+            <Target size={12} /> {completedToday} done
           </div>
           {overdueTasks > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 text-red-500 text-xs font-semibold animate-pulse">
+            <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-red-500/10 text-red-500 text-[10px] sm:text-xs font-semibold animate-pulse">
               ⚠️ {overdueTasks} overdue
             </div>
           )}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-500 text-xs font-semibold">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-500 text-xs font-semibold">
             <FileText size={12} /> {notes.length} notes
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-500 text-xs font-semibold">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-500 text-xs font-semibold">
             <Sparkles size={12} /> {links.length} links
           </div>
         </div>
